@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GatherFlow AI &#8212; GenAI Event Planning Studio</title>
+  <meta name="description"
+    content="GatherFlow AI is a GenAI-powered event planning studio for weddings, birthdays, and community events." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/main.css?v=20261031_2330" />
+</head>
+
+<body>
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-logo">
+        <div class="logo-ring"></div><span class="logo-icon">&#10022;</span>
+      </div>
+      <h1 class="loading-title">GatherFlow AI</h1>
+      <p class="loading-sub">Initializing your planning studio&#8230;</p>
+      <div class="loading-bar">
+        <div class="loading-bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOME / SETUP SCREEN -->
+  <div id="setup-screen" class="screen" aria-label="GatherFlow AI Home Portal">
+    <div class="home-wrapper">
+      <!-- Top Nav -->
+      <header class="home-nav">
+        <div class="sidebar-logo">
+          <span class="brand-icon">&#10022;</span>
+          <span class="brand-name">GatherFlow<span class="brand-accent"> AI</span></span>
+        </div>
+        <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+          <select id="lang-selector-home" class="form-input form-select" style="padding:0.35rem 0.6rem; font-size:0.8rem; width:auto; background:var(--bg-card); border-color:var(--border); color:var(--text-primary); border-radius:8px;" aria-label="Select Language" title="Select Language">
+            <option value="en">🌐 English</option>
+            <option value="hi">हिंदी</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="zh">中文</option>
+            <option value="ar">العربية</option>
+          </select>
+          <button id="btn-home-quick-eval" class="btn btn-primary btn-sm" data-i18n="btn_evaluator">&#9889; Enter as Evaluator</button>
+          <button id="btn-home-demo" class="btn btn-ghost btn-sm"
+            style="border:1px solid var(--primary); color:var(--primary); font-weight:600;" data-i18n="btn_demo">&#127775; Load Demo Event (Judges)</button>
+          <button id="btn-home-guest" class="btn btn-ghost btn-sm" data-i18n="btn_guest">Guest Sandbox</button>
+        </div>
+      </header>
+
+      <!-- Hero -->
+      <section class="home-hero">
+        <div class="home-badge">&#10022; Autonomous Event Operations &bull; Prompt Wars 2026</div>
+        <h1 class="home-title" data-i18n="hero_title">GenAI Event Intelligence &amp; Autonomous Planning Studio</h1>
+        <p class="home-subtitle" data-i18n="hero_sub">
+          Plan fail-safe weddings, community celebrations, and corporate galas with Google Gemini 3.8-Flash,
+          ChromaDB semantic retrieval, and 100% deterministic financial mathematical precision.
+        </p>
+        <div id="home-resume-banner" class="hidden"
+          style="margin-top:1.5rem; display:inline-flex; align-items:center; gap:1rem; background:var(--bg-card); padding:0.6rem 1.25rem; border-radius:99px; border:1px solid var(--border-active);">
+          <span style="font-size:0.875rem; color:var(--text-secondary)">Current Session: <strong id="home-user-name"
+              style="color:var(--primary)">Planner</strong></span>
+          <button id="btn-home-resume" class="btn btn-primary btn-sm" data-i18n="btn_enter_studio">&#9654; Enter Studio</button>
+        </div>
+      </section>
+
+      <!-- Access & Configuration Portal -->
+      <section class="home-portal-grid">
+        <!-- Evaluator & Guest Login -->
+        <div class="portal-card glass">
+          <div class="portal-card-header">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <h2 class="portal-card-title" data-i18n="eval_card_title">&#128272; Evaluator &amp; Planner Access</h2>
+              <span class="evaluator-badge">Verified Session</span>
+            </div>
+            <p class="portal-card-desc" data-i18n="eval_card_desc">
+              Authenticate using the official evaluator passcode to generate a cryptographically random session token
+              with HTTP-only cookies and strict record ownership isolation.
+            </p>
+          </div>
+
+          <form id="evaluator-login-form" class="modal-form" onsubmit="event.preventDefault();">
+            <div class="form-group">
+              <label for="eval-passcode-input" class="form-label" data-i18n="eval_passcode_label">Evaluator Passcode</label>
+              <input type="text" id="eval-passcode-input" class="form-input" value="gatherflow-evaluator"
+                placeholder="gatherflow-evaluator" autocomplete="off" />
+              <span class="form-hint" data-i18n="eval_passcode_hint">Official evaluator passcode configured on the server.</span>
+            </div>
+            <div id="eval-login-status" class="setup-status hidden" role="status"></div>
+            <div class="portal-actions">
+              <button type="button" id="btn-login-evaluator-submit" class="btn btn-primary btn-full" data-i18n="btn_eval_submit">&#9889; Enter as
+                Evaluator (1-Click)</button>
+              <button type="button" id="btn-login-demo-submit" class="btn btn-ghost btn-full"
+                style="border:1px dashed var(--primary); color:var(--primary); font-weight:600;" data-i18n="btn_demo_submit">&#127775; Load Demo
+                Showcase Event (Judges)</button>
+              <button type="button" id="btn-login-guest-submit" class="btn btn-ghost btn-full" data-i18n="btn_guest_submit">&#128100; Continue as
+                Guest (Sandboxed)</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- AI Status Info Card (no API key input needed — key is server-configured) -->
+        <div class="portal-card glass">
+          <div class="portal-card-header">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <h2 class="portal-card-title" data-i18n="ai_card_title">&#10022; AI Engine Status</h2>
+              <span class="status-badge" id="home-ai-status-badge" style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);">&#128994; Online</span>
+            </div>
+            <p class="portal-card-desc" data-i18n="ai_card_desc">
+              Gemini 3.8-Flash is configured server-side and ready for autonomous blueprint synthesis,
+              budget intelligence, Plan Rescue, and ChromaDB semantic search.
+            </p>
+          </div>
+          <div class="modal-form">
+            <div class="settings-current-info" style="margin-bottom:1rem;">
+              <div class="settings-info-row">
+                <span class="info-label">AI Model:</span>
+                <span class="info-val" style="color:var(--primary); font-weight:700;">gemini-3.8-flash</span>
+              </div>
+              <div class="settings-info-row">
+                <span class="info-label">Vector DB:</span>
+                <span class="info-val">Ephemeral ChromaDB (RAG)</span>
+              </div>
+              <div class="settings-info-row">
+                <span class="info-label">Auth:</span>
+                <span class="info-val">HTTP-Only Secure Sessions</span>
+              </div>
+              <div class="settings-info-row">
+                <span class="info-label">Financial Math:</span>
+                <span class="info-val" style="color:var(--success);">&#10004; 100% Deterministic</span>
+              </div>
+            </div>
+            <div class="portal-actions">
+              <button type="button" id="btn-skip-setup" class="btn btn-primary btn-full" data-i18n="btn_guest_full">&#128100; Continue as Guest (Sandboxed)</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How To Use GatherFlow AI: 4 Step Interactive Guide -->
+      <section class="home-guide-section">
+        <div class="home-guide-header">
+          <h3 data-i18n="guide_title">How to Use GatherFlow AI</h3>
+          <p data-i18n="guide_sub">Four autonomous pillars that take you from initial vision to stress-free event execution</p>
+        </div>
+
+        <div class="home-guide-grid">
+          <div class="guide-card">
+            <div class="guide-card-step">Step 1</div>
+            <div class="guide-card-icon">&#128203;</div>
+            <h4 class="guide-card-title" data-i18n="step1_title">Define Event &amp; Vision</h4>
+            <p class="guide-card-text" data-i18n="step1_desc">
+              Enter your celebration type, planned budget, guest headcount, cultural customs, and venue preferences.
+              GatherFlow sets up an isolated workspace.
+            </p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-step">Step 2</div>
+            <div class="guide-card-icon">&#129302;</div>
+            <h4 class="guide-card-title" data-i18n="step2_title">Generate AI Blueprint</h4>
+            <p class="guide-card-text" data-i18n="step2_desc">
+              Gemini 3.8-Flash automatically plans theme concepts, phase milestones, prioritized checklists, and Next
+              Best Actions (NBA) with real-time health scoring.
+            </p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-step">Step 3</div>
+            <div class="guide-card-icon">&#128176;</div>
+            <h4 class="guide-card-title" data-i18n="step3_title">Budget &amp; What-If Studio</h4>
+            <p class="guide-card-text" data-i18n="step3_desc">
+              Track Estimated vs. Quoted vs. Committed vs. Paid costs. Simulate guest surges or budget cuts with 100%
+              deterministic arithmetic.
+            </p>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-card-step">Step 4</div>
+            <div class="guide-card-icon">&#128680;</div>
+            <h4 class="guide-card-title" data-i18n="step4_title">Vector Search &amp; Plan Rescue</h4>
+            <p class="guide-card-text" data-i18n="step4_desc">
+              Discover your vendors using scoped ChromaDB vector search. When disruptions strike, generate and apply an
+              adaptive Plan Rescue in 1 click.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Architecture & Compliance Highlights -->
+      <footer class="home-compliance-grid">
+        <div class="compliance-chip">&#10004; <strong>Model:</strong> gemini-3.8-flash</div>
+        <div class="compliance-chip">&#10004; <strong>Vector DB:</strong> Ephemeral ChromaDB</div>
+        <div class="compliance-chip">&#10004; <strong>Zero Fake Data:</strong> User-Entered Records Only</div>
+        <div class="compliance-chip">&#10004; <strong>Financial Math:</strong> Purely Deterministic</div>
+        <div class="compliance-chip">&#10004; <strong>Auth:</strong> HTTP-Only Secure Sessions</div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app-screen" class="screen hidden">
+    <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+      <div class="sidebar-header">
+        <div class="sidebar-logo"><span class="brand-icon">&#10022;</span><span class="brand-name">GatherFlow<span
+              class="brand-accent"> AI</span></span></div>
+        <button id="btn-sidebar-toggle" class="sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
+      </div>
+      <div class="sidebar-events">
+        <div class="sidebar-section-label" data-i18n="sidebar_events">Your Events</div>
+        <ul id="event-list-sidebar" class="event-list" role="list">
+          <li class="event-list-empty" data-i18n="sidebar_no_events">No events yet</li>
+        </ul>
+        <button id="btn-new-event" class="btn btn-primary btn-sm btn-full" data-i18n="btn_new_event">+ New Event</button>
+        <button id="btn-sidebar-demo" class="btn btn-ghost btn-sm btn-full"
+          style="margin-top:0.4rem; border:1px dashed var(--border-active); color:var(--primary); font-size:0.8rem;" data-i18n="btn_load_demo">&#127775;
+          Load Demo Event</button>
+      </div>
+      <nav class="sidebar-nav" aria-label="Event tabs">
+        <ul class="nav-tabs" role="tablist">
+          <li><button class="nav-tab" id="btn-sidebar-home" type="button" aria-selected="false"><span
+                class="tab-icon">&#127968;</span><span class="tab-label" data-i18n="tab_home">Home &amp; Guide</span></button></li>
+          <li><button class="nav-tab active" data-tab="blueprint" role="tab" aria-selected="true"
+              aria-controls="tab-blueprint" id="nav-blueprint"><span class="tab-icon">&#128506;</span><span
+                class="tab-label" data-i18n="tab_blueprint">Blueprint</span></button></li>
+          <li><button class="nav-tab" data-tab="budget" role="tab" aria-selected="false" aria-controls="tab-budget"
+              id="nav-budget"><span class="tab-icon">&#128176;</span><span class="tab-label" data-i18n="tab_budget">Budget
+                Studio</span></button></li>
+          <li><button class="nav-tab" data-tab="timeline" role="tab" aria-selected="false" aria-controls="tab-timeline"
+              id="nav-timeline"><span class="tab-icon">&#128203;</span><span class="tab-label" data-i18n="tab_timeline">Timeline</span></button>
+          </li>
+          <li><button class="nav-tab" data-tab="vendors" role="tab" aria-selected="false" aria-controls="tab-vendors"
+              id="nav-vendors"><span class="tab-icon">&#129309;</span><span class="tab-label" data-i18n="tab_vendors">Vendors</span></button>
+          </li>
+          <li><button class="nav-tab" data-tab="rescue" role="tab" aria-selected="false" aria-controls="tab-rescue"
+              id="nav-rescue"><span class="tab-icon">&#128680;</span><span class="tab-label" data-i18n="tab_rescue">Plan Rescue</span></button>
+          </li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="ai-status-indicator" id="ai-status-indicator">
+          <span class="status-dot" id="status-dot"></span><span id="ai-status-label">AI: Online</span>
+        </div>
+        <button id="btn-open-settings" class="btn btn-ghost btn-sm" data-i18n="btn_settings">&#9881; Settings</button>
+      </div>
+    </aside>
+
+    <main id="main-content" class="main-content" role="main">
+      <header class="topbar">
+        <div class="topbar-left"><button id="btn-sidebar-open" class="sidebar-open-btn" aria-label="Open sidebar"
+            title="Open sidebar">&#9776;</button>
+          <h2 id="page-title" class="page-title" data-i18n="page_title_select">Select or Create an Event</h2>
+        </div>
+        <div class="topbar-right">
+          <select id="lang-selector-app" class="form-input form-select" style="padding:0.3rem 0.5rem; font-size:0.78rem; width:auto; background:var(--bg-card); border-color:var(--border); color:var(--text-primary); border-radius:8px;" aria-label="Select Language" title="Select Language">
+            <option value="en">🌐 EN</option>
+            <option value="hi">हि</option>
+            <option value="es">ES</option>
+            <option value="fr">FR</option>
+            <option value="de">DE</option>
+            <option value="zh">中</option>
+            <option value="ar">ع</option>
+          </select>
+          <button id="btn-topbar-home" class="btn btn-ghost btn-sm" title="Go to Home &amp; Guide" data-i18n="nav_home">&#127968; Home &amp;
+            Guide</button>
+          <button id="btn-open-copilot" class="btn btn-ghost btn-sm copilot-trigger">&#129302; Copilot<span
+              class="copilot-badge" id="copilot-badge"></span></button>
+          <div class="user-chip" id="user-chip"><span class="user-avatar">&#128100;</span><span
+              id="user-name-display">Guest</span></div>
+          <button id="btn-topbar-logout" class="btn btn-ghost btn-sm" title="Sign out / Switch user"
+            style="color:var(--text-muted)" data-i18n="nav_exit">&#128682; Exit</button>
+        </div>
+      </header>
+
+      <div id="no-event-panel" class="no-event-panel">
+        <div class="no-event-art">&#10022;</div>
+        <h3 data-i18n="studio_awaits_title">Your Planning Studio Awaits</h3>
+        <p data-i18n="studio_awaits_sub">Create a new event or select one from the sidebar to start planning with AI.</p>
+        <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap; margin-top:1rem;">
+          <button class="btn btn-primary btn-lg" id="btn-new-event-center" data-i18n="btn_create_first">+ Create Your First Event</button>
+          <button class="btn btn-ghost btn-lg" id="btn-demo-event-center"
+            style="border:1px solid var(--primary); color:var(--primary); font-weight:600;" data-i18n="btn_demo_center">&#127775; Load Demo Showcase
+            (Judges)</button>
+        </div>
+      </div>
+
+      <div id="event-workspace" class="event-workspace hidden">
+
+        <!-- BLUEPRINT TAB -->
+        <section id="tab-blueprint" class="tab-panel active" role="tabpanel" aria-labelledby="nav-blueprint">
+          <div class="blueprint-grid">
+            <div class="card health-card">
+              <div class="card-header">
+                <h3 class="card-title">Plan Health</h3>
+                <div class="health-score-ring">
+                  <svg viewBox="0 0 80 80" aria-hidden="true">
+                    <circle cx="40" cy="40" r="32" class="ring-bg" />
+                    <circle cx="40" cy="40" r="32" class="ring-fill" id="ring-fill-circle" />
+                  </svg>
+                  <span id="health-score-value" class="ring-value">--</span>
+                </div>
+              </div>
+              <div id="health-status-badge" class="health-status-badge">--</div>
+              <ul id="health-alerts" class="health-alerts"></ul>
+            </div>
+            <div class="card nba-card">
+              <div class="card-header">
+                <h3 class="card-title">Next Best Action</h3><span id="nba-urgency" class="urgency-badge">--</span>
+              </div>
+              <div class="nba-content">
+                <h4 id="nba-title" class="nba-title">Loading...</h4>
+                <p id="nba-description" class="nba-desc">--</p>
+                <button id="btn-nba-action" class="btn btn-primary btn-sm">Go &#8594;</button>
+              </div>
+            </div>
+            <div class="stats-row">
+              <div class="stat-chip"><span class="stat-icon">&#128176;</span>
+                <div>
+                  <div class="stat-label">Budget Used</div>
+                  <div class="stat-value" id="stat-budget-val">--</div>
+                </div>
+              </div>
+              <div class="stat-chip"><span class="stat-icon">&#9989;</span>
+                <div>
+                  <div class="stat-label">Task Progress</div>
+                  <div class="stat-value" id="stat-tasks-val">--</div>
+                </div>
+              </div>
+              <div class="stat-chip"><span class="stat-icon">&#128197;</span>
+                <div>
+                  <div class="stat-label">Days to Event</div>
+                  <div class="stat-value" id="stat-days-val">--</div>
+                </div>
+              </div>
+              <div class="stat-chip"><span class="stat-icon">&#129309;</span>
+                <div>
+                  <div class="stat-label">Vendors OK</div>
+                  <div class="stat-value" id="stat-vendors-val">--</div>
+                </div>
+              </div>
+            </div>
+            <div class="card plan-concept-card">
+              <div class="card-header">
+                <h3 class="card-title">AI Event Concept</h3><button id="btn-regenerate-plan"
+                  class="btn btn-ghost btn-sm">&#8635; Regenerate</button>
+              </div>
+              <div id="plan-concept-content" class="plan-concept-content">
+                <p class="muted">No plan generated yet. Click Regenerate to ask Gemini for ideas.</p>
+              </div>
+            </div>
+            <div class="card milestones-card">
+              <h3 class="card-title">Planning Milestones</h3>
+              <div id="milestones-list" class="milestones-list">
+                <p class="muted">Generate a plan to see milestones.</p>
+              </div>
+            </div>
+            <div class="card risks-card">
+              <h3 class="card-title">Risks &amp; Contingencies</h3>
+              <div id="risks-content" class="risks-content">
+                <p class="muted">--</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- BUDGET TAB -->
+        <section id="tab-budget" class="tab-panel" role="tabpanel" aria-labelledby="nav-budget" hidden>
+          <div class="budget-layout">
+            <div class="budget-sidebar-panel">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">Budget Summary</h3>
+                </div>
+                <div id="budget-summary-block" class="budget-summary-block">
+                  <p class="muted">Loading...</p>
+                </div>
+              </div>
+              <div class="card scenario-card">
+                <div class="card-header">
+                  <h3 class="card-title">What-If Scenario</h3>
+                </div>
+                <form id="scenario-form">
+                  <div class="form-group"><label class="form-label" for="scenario-guest-delta">Guest Count
+                      Change</label><input type="number" id="scenario-guest-delta" class="form-input" value="0"
+                      step="1" /></div>
+                  <div class="form-group"><label class="form-label" for="scenario-budget-delta">Budget Change
+                      (%)</label><input type="number" id="scenario-budget-delta" class="form-input" value="0"
+                      step="1" /></div>
+                  <div class="form-group"><label class="form-label" for="scenario-extra-cost">Additional
+                      Expense</label><input type="number" id="scenario-extra-cost" class="form-input" value="0"
+                      step="100" min="0" /></div>
+                  <button type="submit" class="btn btn-primary btn-full" id="btn-run-scenario">&#9889; Run
+                    What-If</button>
+                </form>
+                <div id="scenario-result" class="scenario-result hidden" role="status" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="budget-main-panel">
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title">Budget Line Items</h3><button id="btn-add-budget-item"
+                    class="btn btn-primary btn-sm">+ Add Item</button>
+                </div>
+                <div class="table-wrapper">
+                  <table class="data-table" id="budget-table">
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>Item</th>
+                        <th>Estimated</th>
+                        <th>Quoted</th>
+                        <th>Committed</th>
+                        <th>Actual</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="budget-table-body">
+                      <tr>
+                        <td colspan="8" class="table-empty">No budget items yet.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TIMELINE TAB -->
+        <section id="tab-timeline" class="tab-panel" role="tabpanel" aria-labelledby="nav-timeline" hidden>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Task &amp; Checklist Timeline</h3>
+              <div class="card-actions">
+                <select id="task-filter-status" class="form-input form-select form-select-sm">
+                  <option value="">All Statuses</option>
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+                <select id="task-filter-priority" class="form-input form-select form-select-sm">
+                  <option value="">All Priorities</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+                <button id="btn-add-task" class="btn btn-primary btn-sm">+ Add Task</button>
+              </div>
+            </div>
+            <div class="progress-bar-wrapper">
+              <div class="progress-bar-track">
+                <div id="task-progress-fill" class="progress-bar-fill" role="progressbar" aria-valuemin="0"
+                  aria-valuemax="100" aria-valuenow="0"></div>
+              </div>
+              <span id="task-progress-label" class="progress-label">0% Complete</span>
+            </div>
+            <div id="task-list-container" class="task-list-container" role="list">
+              <p class="muted" style="padding:1.5rem">No tasks yet.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- VENDORS TAB -->
+        <section id="tab-vendors" class="tab-panel" role="tabpanel" aria-labelledby="nav-vendors" hidden>
+          <!-- ChromaDB Semantic Discovery -->
+          <div class="card vendor-discovery-card" style="margin-bottom:1.5rem;">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">&#128269; ChromaDB Semantic Vendor Discovery</h3>
+                <p class="card-subtitle" style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;">
+                  Vector-powered semantic discovery across curated suppliers and custom catalog</p>
+              </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;padding:0.5rem 1.25rem 1.25rem;flex-wrap:wrap;">
+              <input type="text" id="vendor-semantic-input" class="form-input"
+                placeholder="e.g. candid drone photography, organic vegan dinner buffet..."
+                style="flex:1;min-width:240px;" />
+              <select id="vendor-semantic-category" class="form-input form-select" style="width:160px;">
+                <option value="">All Categories</option>
+                <option value="Venue">Venue</option>
+                <option value="Catering">Catering</option>
+                <option value="Photography">Photography</option>
+                <option value="Decoration">Decoration</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Invitations">Invitations</option>
+              </select>
+              <button id="btn-vendor-semantic-search" class="btn btn-primary" type="button">&#9889; Search
+                Vectors</button>
+            </div>
+            <div id="vendor-semantic-results" class="vendor-semantic-results hidden" style="padding:0 1.25rem 1.25rem;">
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Event Vendor CRM</h3><button id="btn-add-vendor" class="btn btn-primary btn-sm">+
+                Add Vendor</button>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table" id="vendor-table">
+                <thead>
+                  <tr>
+                    <th>Vendor</th>
+                    <th>Category</th>
+                    <th>Contact</th>
+                    <th>Quotation</th>
+                    <th>Status</th>
+                    <th>Follow-Up</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="vendor-table-body">
+                  <tr>
+                    <td colspan="7" class="table-empty">No vendors yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- RESCUE TAB -->
+        <section id="tab-rescue" class="tab-panel" role="tabpanel" aria-labelledby="nav-rescue" hidden>
+          <div class="rescue-layout">
+            <div class="card rescue-form-card">
+              <div class="card-header">
+                <div class="rescue-icon-badge">&#128680;</div>
+                <div>
+                  <h3 class="card-title">Plan Rescue AI</h3>
+                  <p class="card-subtitle">Describe what changed &#8212; Gemini will create a smart recovery plan.</p>
+                </div>
+              </div>
+              <form id="rescue-form">
+                <div class="form-group"><label class="form-label" for="rescue-scenario-type">Scenario Type</label>
+                  <select id="rescue-scenario-type" class="form-input form-select" required>
+                    <option value="">Select scenario...</option>
+                    <option value="budget_cut">Budget Cut</option>
+                    <option value="guest_surge">Guest Surge</option>
+                    <option value="vendor_cancelled">Vendor Cancelled</option>
+                    <option value="date_change">Date Change</option>
+                    <option value="outdoor_weather">Outdoor / Weather Risk</option>
+                    <option value="urgent_tasks">Urgent Tasks</option>
+                    <option value="custom">Custom / Other</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label" for="rescue-description">Describe the
+                    situation</label>
+                  <textarea id="rescue-description" class="form-input form-textarea" rows="4" required
+                    placeholder="e.g. Our main venue cancelled 3 weeks before the wedding..."></textarea>
+                </div>
+                <div class="rescue-optional-fields">
+                  <div class="form-group"><label class="form-label" for="rescue-new-budget">New Target Budget
+                      (optional)</label><input type="number" id="rescue-new-budget" class="form-input" min="0"
+                      step="100" placeholder="Leave blank to keep current" /></div>
+                  <div class="form-group"><label class="form-label" for="rescue-new-guests">New Guest Count
+                      (optional)</label><input type="number" id="rescue-new-guests" class="form-input" min="1" step="1"
+                      placeholder="Leave blank to keep current" /></div>
+                </div>
+                <button type="submit" id="btn-rescue-submit" class="btn btn-rescue btn-full">&#128680; Generate Rescue
+                  Plan</button>
+              </form>
+            </div>
+            <div id="rescue-proposal-panel" class="rescue-proposal-panel card hidden" role="region" aria-live="polite">
+              <div class="proposal-header">
+                <h3 class="card-title">Rescue Proposal</h3><span id="rescue-proposal-id" class="muted small"></span>
+              </div>
+              <div id="rescue-proposal-content"></div>
+              <div class="rescue-apply-actions">
+                <label class="checkbox-label"><input type="checkbox" id="apply-event-updates" checked /> Apply event
+                  updates</label>
+                <label class="checkbox-label"><input type="checkbox" id="apply-budget-adj" checked /> Apply budget
+                  adjustments</label>
+                <label class="checkbox-label"><input type="checkbox" id="apply-task-actions" checked /> Apply task
+                  actions</label>
+                <button id="btn-apply-rescue" class="btn btn-rescue">&#10003; Apply Plan Rescue</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /event-workspace -->
+    </main>
+
+    <!-- COPILOT DRAWER -->
+    <div id="copilot-drawer" class="copilot-drawer" role="dialog" aria-label="AI Planning Copilot" aria-modal="true"
+      hidden>
+      <div class="copilot-header">
+        <div class="copilot-title"><span class="copilot-icon">&#129302;</span>
+          <div><strong>AI Copilot</strong>
+            <p class="copilot-subtitle">Ask anything about your event</p>
+          </div>
+        </div>
+        <button id="btn-close-copilot" class="icon-btn" aria-label="Close copilot">&#10005;</button>
+      </div>
+      <div id="copilot-messages" class="copilot-messages" role="log" aria-live="polite">
+        <div class="copilot-msg bot"><span class="msg-avatar">&#129302;</span>
+          <div class="msg-bubble">Hi! I am your AI planning assistant powered by Gemini. Ask me anything about your
+            event &#8212; budget tips, vendor suggestions, checklist help, or what-if scenarios.</div>
+        </div>
+      </div>
+      <form id="copilot-form" class="copilot-input-row">
+        <input type="text" id="copilot-input" class="form-input copilot-input" placeholder="Ask Gemini anything..."
+          autocomplete="off" />
+        <button type="submit" id="btn-copilot-send" class="btn btn-primary">Send</button>
+      </form>
+    </div>
+    <div id="copilot-overlay" class="copilot-overlay hidden" aria-hidden="true"></div>
+  </div><!-- /app-screen -->
+
+  <!-- NEW EVENT MODAL -->
+  <div id="modal-new-event" class="modal-overlay hidden" role="dialog" aria-modal="true"
+    aria-labelledby="new-event-modal-title">
+    <div class="modal glass">
+      <div class="modal-header">
+        <h2 id="new-event-modal-title" class="modal-title">Create New Event</h2><button class="modal-close"
+          data-modal="modal-new-event">&#10005;</button>
+      </div>
+      <form id="new-event-form" class="modal-form">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="ne-title">Event Name *</label><input type="text"
+              id="ne-title" class="form-input" required minlength="2" maxlength="150"
+              placeholder="e.g. Sarah and Rajan Wedding" /></div>
+          <div class="form-group"><label class="form-label" for="ne-type">Event Type *</label>
+            <select id="ne-type" class="form-input form-select" required>
+              <option value="">Choose type...</option>
+              <option value="wedding">Wedding</option>
+              <option value="birthday">Birthday</option>
+              <option value="community">Community Event</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="ne-date">Event Date *</label><input type="date"
+              id="ne-date" class="form-input" required /></div>
+          <div class="form-group"><label class="form-label" for="ne-time">Time Details</label><input type="text"
+              id="ne-time" class="form-input" placeholder="e.g. 6:00 PM - Midnight" /></div>
+        </div>
+        <div class="form-group"><label class="form-label" for="ne-location">Location / City *</label><input type="text"
+            id="ne-location" class="form-input" required placeholder="e.g. Mumbai, Maharashtra" /></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="ne-guests">Guest Count *</label><input type="number"
+              id="ne-guests" class="form-input" required min="1" max="100000" placeholder="150" /></div>
+          <div class="form-group"><label class="form-label" for="ne-budget">Total Budget *</label>
+            <div class="input-with-prefix">
+              <select id="ne-currency" class="form-input form-select form-select-currency">
+                <option value="INR">&#8377; INR</option>
+                <option value="USD">$ USD</option>
+                <option value="EUR">&#8364; EUR</option>
+                <option value="GBP">&#163; GBP</option>
+              </select>
+              <input type="number" id="ne-budget" class="form-input" required min="0" placeholder="500000" />
+            </div>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label" for="ne-theme">Theme / Style</label><input type="text"
+            id="ne-theme" class="form-input" placeholder="e.g. Rustic Garden, Royal Mughal" /></div>
+        <div class="form-group"><label class="form-label" for="ne-cultural">Cultural / Religious
+            Preferences</label><textarea id="ne-cultural" class="form-input form-textarea" rows="2"
+            placeholder="e.g. Hindu ceremony, Halal catering"></textarea></div>
+        <div class="form-group"><label class="form-label" for="ne-constraints">Priorities &amp;
+            Constraints</label><textarea id="ne-constraints" class="form-input form-textarea" rows="2"
+            placeholder="e.g. Photography is top priority, outdoor venue preferred"></textarea></div>
+        <div id="new-event-error" class="form-error hidden" role="alert"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal="modal-new-event">Cancel</button>
+          <button type="submit" id="btn-create-event-submit" class="btn btn-primary">&#10024; Create &amp; Generate AI
+            Plan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- BUDGET ITEM MODAL -->
+  <div id="modal-budget-item" class="modal-overlay hidden" role="dialog" aria-modal="true"
+    aria-labelledby="budget-item-modal-title">
+    <div class="modal glass">
+      <div class="modal-header">
+        <h2 id="budget-item-modal-title" class="modal-title">Budget Item</h2><button class="modal-close"
+          data-modal="modal-budget-item">&#10005;</button>
+      </div>
+      <form id="budget-item-form" class="modal-form">
+        <input type="hidden" id="bi-id" />
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="bi-category">Category *</label><input type="text"
+              id="bi-category" class="form-input" required placeholder="e.g. Catering" /></div>
+          <div class="form-group"><label class="form-label" for="bi-name">Item Name *</label><input type="text"
+              id="bi-name" class="form-input" required placeholder="e.g. 5-Course Dinner Package" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="bi-estimated">Estimated</label><input type="number"
+              id="bi-estimated" class="form-input" min="0" step="100" value="0" /></div>
+          <div class="form-group"><label class="form-label" for="bi-quoted">Quoted</label><input type="number"
+              id="bi-quoted" class="form-input" min="0" step="100" value="0" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="bi-committed">Committed</label><input type="number"
+              id="bi-committed" class="form-input" min="0" step="100" value="0" /></div>
+          <div class="form-group"><label class="form-label" for="bi-actual">Actual Paid</label><input type="number"
+              id="bi-actual" class="form-input" min="0" step="100" value="0" /></div>
+        </div>
+        <div class="form-group"><label class="form-label" for="bi-status">Status</label>
+          <select id="bi-status" class="form-input form-select">
+            <option value="planned">Planned</option>
+            <option value="quoted">Quoted</option>
+            <option value="committed">Committed</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label" for="bi-notes">Notes</label><textarea id="bi-notes"
+            class="form-input form-textarea" rows="2"></textarea></div>
+        <div id="budget-item-error" class="form-error hidden" role="alert"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal="modal-budget-item">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-budget-item">Save Item</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TASK MODAL -->
+  <div id="modal-task" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+    <div class="modal glass">
+      <div class="modal-header">
+        <h2 id="task-modal-title" class="modal-title">Task</h2><button class="modal-close"
+          data-modal="modal-task">&#10005;</button>
+      </div>
+      <form id="task-form" class="modal-form">
+        <input type="hidden" id="task-id" />
+        <div class="form-group"><label class="form-label" for="task-title">Task Title *</label><input type="text"
+            id="task-title" class="form-input" required placeholder="e.g. Book caterer" /></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="task-category">Category</label><input type="text"
+              id="task-category" class="form-input" value="General" /></div>
+          <div class="form-group"><label class="form-label" for="task-assignee">Assignee</label><input type="text"
+              id="task-assignee" class="form-input" placeholder="e.g. Priya" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="task-due">Due Date</label><input type="date"
+              id="task-due" class="form-input" /></div>
+          <div class="form-group"><label class="form-label" for="task-priority">Priority</label>
+            <select id="task-priority" class="form-input form-select">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label" for="task-status">Status</label>
+          <select id="task-status" class="form-input form-select">
+            <option value="todo">To Do</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label" for="task-notes">Notes</label><textarea id="task-notes"
+            class="form-input form-textarea" rows="2"></textarea></div>
+        <div id="task-error" class="form-error hidden" role="alert"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal="modal-task">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-task">Save Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- VENDOR MODAL -->
+  <div id="modal-vendor" class="modal-overlay hidden" role="dialog" aria-modal="true"
+    aria-labelledby="vendor-modal-title">
+    <div class="modal glass">
+      <div class="modal-header">
+        <h2 id="vendor-modal-title" class="modal-title">Vendor</h2><button class="modal-close"
+          data-modal="modal-vendor">&#10005;</button>
+      </div>
+      <form id="vendor-form" class="modal-form">
+        <input type="hidden" id="vendor-id" />
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="vendor-name">Vendor Name *</label><input type="text"
+              id="vendor-name" class="form-input" required placeholder="e.g. The Grand Ballroom" /></div>
+          <div class="form-group"><label class="form-label" for="vendor-category">Category *</label><input type="text"
+              id="vendor-category" class="form-input" required placeholder="e.g. Venue" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="vendor-contact-person">Contact Person</label><input
+              type="text" id="vendor-contact-person" class="form-input" placeholder="e.g. Ramesh Kumar" /></div>
+          <div class="form-group"><label class="form-label" for="vendor-phone">Phone</label><input type="tel"
+              id="vendor-phone" class="form-input" placeholder="+91 98765 43210" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="vendor-email">Email</label><input type="email"
+              id="vendor-email" class="form-input" placeholder="vendor@example.com" /></div>
+          <div class="form-group"><label class="form-label" for="vendor-quotation">Quotation Amount</label><input
+              type="number" id="vendor-quotation" class="form-input" min="0" step="100" value="0" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label" for="vendor-status">Status</label>
+            <select id="vendor-status" class="form-input form-select">
+              <option value="enquiry">Enquiry</option>
+              <option value="shortlisted">Shortlisted</option>
+              <option value="quoted">Quoted</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label" for="vendor-followup">Follow-Up Date</label><input
+              type="date" id="vendor-followup" class="form-input" /></div>
+        </div>
+        <div class="form-group"><label class="form-label" for="vendor-notes">Notes</label><textarea id="vendor-notes"
+            class="form-input form-textarea" rows="2"></textarea></div>
+        <div id="vendor-error" class="form-error hidden" role="alert"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal="modal-vendor">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-vendor">Save Vendor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="modal-settings" class="modal-overlay hidden" role="dialog" aria-modal="true"
+    aria-labelledby="settings-modal-title">
+    <div class="modal glass">
+      <div class="modal-header">
+        <h2 id="settings-modal-title" class="modal-title">&#9881; Settings &amp; AI Status</h2>
+        <button class="modal-close" data-modal="modal-settings">&#10005;</button>
+      </div>
+      <div class="modal-form">
+        <div class="settings-current-info">
+          <div class="settings-info-row">
+            <span class="info-label">Configured Model:</span>
+            <span class="info-val" id="settings-active-model">gemini-3.8-flash</span>
+          </div>
+          <div class="settings-info-row">
+            <span class="info-label">Live Connection Status:</span>
+            <span class="info-val" id="settings-connection-badge"><span class="status-dot"></span> Checking...</span>
+          </div>
+          <div class="settings-info-row">
+            <span class="info-label">API Key Source:</span>
+            <span class="info-val" style="color:var(--success);">&#128274; Server Environment (.env)</span>
+          </div>
+        </div>
+
+        <div style="margin:1rem 0; padding:0.85rem 1rem; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); border-radius:10px;">
+          <p style="font-size:0.85rem; color:var(--text-secondary); margin:0; line-height:1.6;">
+            &#128994; <strong style="color:var(--success);">AI is configured server-side.</strong>
+            The Gemini API key is securely loaded from the server's environment variables — no manual input required.
+            All users (evaluator, guest, public) share the same AI engine automatically.
+          </p>
+        </div>
+
+        <div id="settings-status" class="setup-status hidden" role="status"></div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-modal="modal-settings">Close</button>
+          <button type="button" id="btn-test-settings" class="btn btn-primary">&#9889; Test Live Connection</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
+  <script src="/static/js/app.js?v=20261031_2330"></script>
+</body>
+
+</html>
