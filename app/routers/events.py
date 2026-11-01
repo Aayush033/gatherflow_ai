@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/events", tags=["Events & Planning"])
 
 
 @router.post("", response_model=EventOut, status_code=status.HTTP_201_CREATED)
-def create_event(event_in: EventCreate, current_user: dict = Depends(get_current_user_dep)):
+def create_event(event_in: EventCreate, current_user: dict = Depends(get_current_user_dep)) -> EventOut:
     """
     Creates a new event, saves it to persistent storage,
     and initiates initial plan generation.
@@ -65,11 +65,11 @@ def create_event(event_in: EventCreate, current_user: dict = Depends(get_current
         plan_data = ai_service.generate_initial_event_plan(created_event)
         save_plan_and_seed_items(event_id, plan_data, created_event)
     except ai_service.AIServiceError as e:
-        logger.warning(f"AI initial plan generation could not complete: {e}")
+        logger.warning("AI initial plan generation could not complete: %s", e)
         plan_status = "unplanned"
         plan_warning = f"Event saved successfully, but AI plan could not be generated: {e!s}. You can retry generating the plan anytime."
     except Exception as e:
-        logger.error(f"Unexpected error seeding plan: {e}")
+        logger.error("Unexpected error seeding plan: %s", e)
         plan_status = "unplanned"
         plan_warning = (
             "Event saved successfully, but AI plan generation failed. You can retry generating the plan anytime."
@@ -81,7 +81,7 @@ def create_event(event_in: EventCreate, current_user: dict = Depends(get_current
 
 
 @router.post("/demo-showcase", response_model=EventOut, status_code=status.HTTP_201_CREATED)
-def seed_demo_showcase_event(current_user: dict = Depends(get_current_user_dep)):
+def seed_demo_showcase_event(current_user: dict = Depends(get_current_user_dep)) -> EventOut:
     """
     Creates or resets a complete, rich demonstration event for evaluators and judges.
     Instantly populates a realistic 250-guest corporate gala with:
@@ -538,7 +538,7 @@ def seed_demo_showcase_event(current_user: dict = Depends(get_current_user_dep))
             user_id=user_id,
         )
     except Exception as e:
-        logger.warning(f"Could not index demo vendors into ChromaDB: {e}")
+        logger.warning("Could not index demo vendors into ChromaDB: %s", e)
 
     created["plan_status"] = "ready"
     created["plan_warning"] = None
@@ -546,7 +546,7 @@ def seed_demo_showcase_event(current_user: dict = Depends(get_current_user_dep))
 
 
 @router.post("/{event_id}/plan/generate", response_model=EventPlanOut)
-def generate_or_retry_event_plan(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def generate_or_retry_event_plan(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> EventPlanOut:
     """
     Dedicated retry action for generating the AI event blueprint and seeded budget/tasks
     if initial planning was unconfigured or failed.
@@ -668,7 +668,7 @@ def save_plan_and_seed_items(event_id: str, plan_data: Any, event_dict: dict[str
 
 
 @router.get("", response_model=list[EventOut])
-def list_events(current_user: dict = Depends(get_current_user_dep)):
+def list_events(current_user: dict = Depends(get_current_user_dep)) -> list[EventOut]:
     """Returns only events owned by the authenticated user."""
     with get_db() as conn:
         cursor = conn.cursor()
@@ -677,7 +677,7 @@ def list_events(current_user: dict = Depends(get_current_user_dep)):
 
 
 @router.get("/{event_id}", response_model=EventOut)
-def get_event(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def get_event(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> EventOut:
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM events WHERE id = ? AND user_id = ?", (event_id, current_user["id"]))
@@ -688,7 +688,9 @@ def get_event(event_id: str, current_user: dict = Depends(get_current_user_dep))
 
 
 @router.patch("/{event_id}", response_model=EventOut)
-def update_event(event_id: str, event_update: EventUpdate, current_user: dict = Depends(get_current_user_dep)):
+def update_event(
+    event_id: str, event_update: EventUpdate, current_user: dict = Depends(get_current_user_dep)
+) -> EventOut:
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM events WHERE id = ? AND user_id = ?", (event_id, current_user["id"]))
@@ -712,7 +714,7 @@ def update_event(event_id: str, event_update: EventUpdate, current_user: dict = 
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_event(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def delete_event(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> None:
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM events WHERE id = ? AND user_id = ?", (event_id, current_user["id"]))
@@ -721,7 +723,7 @@ def delete_event(event_id: str, current_user: dict = Depends(get_current_user_de
 
 
 @router.get("/{event_id}/plan", response_model=EventPlanOut | None)
-def get_event_plan(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def get_event_plan(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> EventPlanOut | None:
     with get_db() as conn:
         cursor = conn.cursor()
         # Verify ownership
@@ -737,7 +739,7 @@ def get_event_plan(event_id: str, current_user: dict = Depends(get_current_user_
 
 
 @router.post("/{event_id}/plan/generate", response_model=EventPlanOut)
-def regenerate_event_plan(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def regenerate_event_plan(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> EventPlanOut:
     """Explicitly triggers Gemini to generate or refresh the event plan."""
     with get_db() as conn:
         cursor = conn.cursor()

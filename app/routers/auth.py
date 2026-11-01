@@ -37,7 +37,7 @@ def create_isolated_user(name: str = "Event Planner", email: str | None = None, 
         return user, random_token
 
 
-def apply_session_cookie(response: Response, session_token: str):
+def apply_session_cookie(response: Response, session_token: str) -> None:
     """Sets secure HTTP-only session cookie."""
     is_prod = settings.ENVIRONMENT == "production"
     response.set_cookie(
@@ -48,7 +48,7 @@ def apply_session_cookie(response: Response, session_token: str):
 @router.get("/me", response_model=UserOut)
 def get_current_user(
     response: Response, gatherflow_session: str | None = Cookie(None), x_session_id: str | None = Header(None)
-):
+) -> UserOut:
     """
     Returns the authenticated user for the current session.
     If no session exists, creates an isolated guest session with a secure server-generated token.
@@ -71,7 +71,7 @@ def get_current_user(
 
 
 @router.post("/evaluator-login", response_model=UserOut)
-def evaluator_login(req: EvaluatorLoginRequest, response: Response):
+def evaluator_login(req: EvaluatorLoginRequest, response: Response) -> UserOut:
     """
     Dedicated evaluator login. Requires server-validated passcode.
     Generates a cryptographically secure, random session token upon valid authentication.
@@ -107,7 +107,7 @@ def evaluator_login(req: EvaluatorLoginRequest, response: Response):
 
 
 @router.post("/logout")
-def logout(response: Response):
+def logout(response: Response) -> dict[str, str]:
     """Clears the session cookie."""
     response.delete_cookie(key=settings.SESSION_COOKIE_NAME, path="/")
     return {"message": "Logged out successfully"}

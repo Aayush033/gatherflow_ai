@@ -58,8 +58,12 @@ def calculate_plan_health(
     # 3. Unconfirmed critical vendors
     # Check if critical categories (Venue, Catering) have confirmed vendors
     critical_categories = {"venue", "catering"}
-    confirmed_categories = {v.get("category", "").lower() for v in vendors if v.get("status") == "confirmed"}
-    missing_critical = [c.capitalize() for c in critical_categories if c not in confirmed_categories]
+    confirmed_categories = {
+        vendor.get("category", "").lower() for vendor in vendors if vendor.get("status") == "confirmed"
+    }
+    missing_critical = [
+        category_name.capitalize() for category_name in critical_categories if category_name not in confirmed_categories
+    ]
     unconfirmed_critical_count = len(missing_critical)
 
     if unconfirmed_critical_count > 0 and days_to_event <= 30:
@@ -118,9 +122,12 @@ def determine_next_best_action(
         )
 
     # 2. Overdue high-priority tasks
-    overdue_tasks = [t for t in tasks if t.get("is_overdue")]
+    overdue_tasks = [task_item for task_item in tasks if task_item.get("is_overdue")]
     if overdue_tasks:
-        high_overdue = next((t for t in overdue_tasks if t.get("priority") in ("high", "critical")), overdue_tasks[0])
+        high_overdue = next(
+            (task_item for task_item in overdue_tasks if task_item.get("priority") in ("high", "critical")),
+            overdue_tasks[0],
+        )
         return NextBestAction(
             title=f"Resolve Overdue Task: {high_overdue.get('title')}",
             description=f"This task is overdue for the category '{high_overdue.get('category')}'. Update its due date, assign an owner, or mark it completed.",
@@ -177,7 +184,7 @@ def determine_next_best_action(
 
 
 @router.get("", response_model=EventBlueprintOut)
-def get_event_blueprint(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def get_event_blueprint(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> EventBlueprintOut:
     # Verify ownership & fetch event
     event_dict = verify_event_ownership(event_id, current_user["id"])
 

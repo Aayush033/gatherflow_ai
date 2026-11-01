@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/events/{event_id}/budget", tags=["Budget Intelli
 
 
 @router.get("/items", response_model=list[BudgetItemOut])
-def list_budget_items(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def list_budget_items(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> list[BudgetItemOut]:
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
@@ -33,7 +33,9 @@ def list_budget_items(event_id: str, current_user: dict = Depends(get_current_us
 
 
 @router.post("/items", response_model=BudgetItemOut, status_code=status.HTTP_201_CREATED)
-def create_budget_item(event_id: str, item_in: BudgetItemCreate, current_user: dict = Depends(get_current_user_dep)):
+def create_budget_item(
+    event_id: str, item_in: BudgetItemCreate, current_user: dict = Depends(get_current_user_dep)
+) -> BudgetItemOut:
     verify_event_ownership(event_id, current_user["id"])
     item_id = f"bgt_{uuid.uuid4().hex[:8]}"
 
@@ -66,7 +68,7 @@ def create_budget_item(event_id: str, item_in: BudgetItemCreate, current_user: d
 @router.patch("/items/{item_id}", response_model=BudgetItemOut)
 def update_budget_item(
     event_id: str, item_id: str, item_update: BudgetItemUpdate, current_user: dict = Depends(get_current_user_dep)
-):
+) -> BudgetItemOut:
     verify_event_ownership(event_id, current_user["id"])
     update_data = item_update.model_dump(exclude_unset=True)
     if not update_data:
@@ -94,7 +96,7 @@ def update_budget_item(
 
 
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_budget_item(event_id: str, item_id: str, current_user: dict = Depends(get_current_user_dep)):
+def delete_budget_item(event_id: str, item_id: str, current_user: dict = Depends(get_current_user_dep)) -> None:
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
@@ -104,7 +106,7 @@ def delete_budget_item(event_id: str, item_id: str, current_user: dict = Depends
 
 
 @router.get("/summary", response_model=BudgetSummaryOut)
-def get_budget_summary(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def get_budget_summary(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> BudgetSummaryOut:
     event = verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
@@ -116,7 +118,7 @@ def get_budget_summary(event_id: str, current_user: dict = Depends(get_current_u
 @router.post("/scenario", response_model=BudgetScenarioResponse)
 def analyze_budget_scenario(
     event_id: str, scenario: BudgetScenarioRequest, current_user: dict = Depends(get_current_user_dep)
-):
+) -> BudgetScenarioResponse:
     """
     Runs a 'What-If' scenario. Calculates numerical impact deterministically,
     and asks Gemini to explain strategic trade-offs and alternatives.

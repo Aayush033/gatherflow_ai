@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -73,7 +74,7 @@ class SetApiKeyRequest(BaseModel):
 
 
 @app.post("/api/config/gemini-key", tags=["Configuration"])
-def configure_gemini_key(req: SetApiKeyRequest):
+def configure_gemini_key(req: SetApiKeyRequest) -> dict[str, Any]:
     """
     Development-only endpoint for configuring Gemini credentials.
     Strictly blocked in production environments.
@@ -101,8 +102,8 @@ static_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
-@app.get("/", include_in_schema=False)
-async def serve_index():
+@app.get("/", include_in_schema=False, response_model=None)
+async def serve_index() -> FileResponse | JSONResponse:
     index_file = static_dir / "index.html"
     if index_file.exists():
         return FileResponse(index_file)

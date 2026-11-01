@@ -51,7 +51,9 @@ def call_gemini_with_resilience(client: genai.Client, model: str, contents: Any,
         try:
             response = client.models.generate_content(model=current_model, contents=contents, config=config)
             if current_model != model:
-                logger.info(f"Generated response using high-availability fallback {current_model} after {model} spike.")
+                logger.info(
+                    "Generated response using high-availability fallback %s after %s spike.", current_model, model
+                )
             return response
         except APIError as e:
             last_error = e
@@ -66,16 +68,16 @@ def call_gemini_with_resilience(client: genai.Client, model: str, contents: Any,
 
             # If 503 (demand spike) or 504 (deadline exceeded), log and try fallback model
             if code in (503, 504) or "deadline" in err_msg or "high demand" in err_msg or "unavailable" in err_msg:
-                logger.warning(f"Model {current_model} returned {code or 'timeout'}. Attempting fallback model...")
+                logger.warning("Model %s returned %s. Attempting fallback model...", current_model, code or "timeout")
                 continue
             raise e
         except Exception as e:
             last_error = e
             err_msg = str(e).lower()
             if "deadline" in err_msg or "timeout" in err_msg or "timed out" in err_msg:
-                logger.warning(f"Model {current_model} timed out. Attempting fallback model...")
+                logger.warning("Model %s timed out. Attempting fallback model...", current_model)
                 continue
-            logger.warning(f"Model {current_model} exception: {e}")
+            logger.warning("Model %s exception: %s", current_model, e)
             break
 
     if last_error:
@@ -147,7 +149,7 @@ def check_model_health(api_key_override: str | None = None) -> dict[str, Any]:
                 "key_configured": True,
                 "message": "Google servers timed out (HTTP 504 Deadline Exceeded). Spikes in demand are temporary.",
             }
-        logger.error(f"Google GenAI APIError: {e}")
+        logger.error("Google GenAI APIError: %s", e)
         return {
             "status": "error",
             "model": settings.GEMINI_MODEL,
@@ -156,7 +158,7 @@ def check_model_health(api_key_override: str | None = None) -> dict[str, Any]:
             "message": f"AI model request rejected: {str(e)[:180]}",
         }
     except Exception as e:
-        logger.error(f"GenAI connection error: {e}")
+        logger.error("GenAI connection error: %s", e)
         err_msg = str(e).lower()
         if "deadline" in err_msg or "timeout" in err_msg or "timed out" in err_msg:
             return {
@@ -258,13 +260,13 @@ Return your response in valid JSON with this exact structure:
         return EventPlanData(**data)
 
     except json.JSONDecodeError as jde:
-        logger.error(f"Failed to parse Gemini response as JSON: {response.text}")
+        logger.error("Failed to parse Gemini response as JSON: %s", response.text)
         raise AIServiceError(f"Model output could not be parsed as structured JSON: {jde!s}")
     except APIError as ae:
-        logger.error(f"Gemini API Error during plan generation: {ae}")
+        logger.error("Gemini API Error during plan generation: %s", ae)
         raise AIServiceError(f"Gemini API Error: {ae.message if hasattr(ae, 'message') else str(ae)}", {"model": model})
     except Exception as e:
-        logger.error(f"Unexpected error in plan generation: {e}")
+        logger.error("Unexpected error in plan generation: %s", e)
         raise AIServiceError(f"AI Plan Generation failed: {e!s}")
 
 
@@ -393,15 +395,15 @@ Return JSON in this exact structure:
         return data
 
     except json.JSONDecodeError as jde:
-        logger.error(f"Failed to parse Plan Rescue JSON: {response.text}")
+        logger.error("Failed to parse Plan Rescue JSON: %s", response.text)
         raise AIServiceError(f"Plan Rescue output could not be parsed as structured JSON: {jde!s}")
     except APIError as ae:
-        logger.error(f"Gemini API Error during Plan Rescue: {ae}")
+        logger.error("Gemini API Error during Plan Rescue: %s", ae)
         raise AIServiceError(
             f"Gemini API Error during Plan Rescue: {ae.message if hasattr(ae, 'message') else str(ae)}"
         )
     except Exception as e:
-        logger.error(f"Unexpected error in Plan Rescue: {e}")
+        logger.error("Unexpected error in Plan Rescue: %s", e)
         raise AIServiceError(f"Plan Rescue failed: {e!s}")
 
 
@@ -507,7 +509,7 @@ Return JSON with this exact structure:
             "relevant_tab": "blueprint",
         }
     except Exception as e:
-        logger.error(f"Error in Copilot chat: {e}")
+        logger.error("Error in Copilot chat: %s", e)
         raise AIServiceError(f"Copilot query failed: {e!s}")
 
 
@@ -540,7 +542,7 @@ Please provide a concise strategic evaluation (2 short paragraphs):
             response.text.strip() if response.text else "Review the numerical impact above before committing changes."
         )
     except Exception as e:
-        logger.warning(f"Could not fetch AI scenario commentary: {e}")
+        logger.warning("Could not fetch AI scenario commentary: %s", e)
         err_str = str(e).lower()
         if "429" in err_str or "resource_exhausted" in err_str or "quota" in err_str:
             return "AI strategic commentary is temporarily paused (Gemini API quota reached). Your deterministic financial projections above are 100% verified and active."

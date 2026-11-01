@@ -85,7 +85,7 @@ def get_chroma_client(persist_path: Path | None = None) -> Any:
     return _client
 
 
-def set_chroma_client(client: Any | None):
+def set_chroma_client(client: Any | None) -> None:
     """Allows test fixtures to inject an isolated ephemeral client."""
     global _client
     _client = client
@@ -157,7 +157,7 @@ GENERAL_RESCUE_PLAYBOOKS = [
 ]
 
 
-def init_vector_db():
+def init_vector_db() -> None:
     """
     Initializes ChromaDB collections for user vendor similarity search,
     general knowledge heuristics, and rescue playbooks.
@@ -208,7 +208,7 @@ def init_vector_db():
         raise
 
 
-def index_user_vendor(vendor_dict: dict[str, Any], event_id: str | None = None, user_id: str | None = None):
+def index_user_vendor(vendor_dict: dict[str, Any], event_id: str | None = None, user_id: str | None = None) -> None:
     """
     Indexes a user-entered vendor in ChromaDB, strictly scoped to the user's event.
     No cross-user or cross-event leakage.
@@ -232,14 +232,14 @@ def index_user_vendor(vendor_dict: dict[str, Any], event_id: str | None = None, 
     )
 
 
-def delete_user_vendor(vendor_id: str):
+def delete_user_vendor(vendor_id: str) -> None:
     """Removes a vendor record from ChromaDB when deleted by the user."""
     try:
         client = get_chroma_client()
         vendor_col = client.get_or_create_collection(name="vendor_catalog", embedding_function=_embedding_fn)
         vendor_col.delete(ids=[vendor_id])
     except Exception as e:
-        logger.warning(f"Could not delete vendor {vendor_id} from vector store: {e}")
+        logger.warning("Could not delete vendor %s from vector store: %s", vendor_id, e)
 
 
 def search_vendors_text_similarity(

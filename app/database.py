@@ -13,7 +13,7 @@ def get_db_path() -> Path:
     return settings.DATABASE_PATH
 
 
-def init_db(db_path: Path | None = None):
+def init_db(db_path: Path | None = None) -> None:
     """Initializes the SQLite database with full schema and WAL mode."""
     target_path = db_path or get_db_path()
     target_path.parent.mkdir(parents=True, exist_ok=True)

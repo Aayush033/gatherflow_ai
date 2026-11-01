@@ -16,7 +16,7 @@ def list_tasks(
     status_filter: str | None = Query(None, alias="status"),
     category_filter: str | None = Query(None, alias="category"),
     current_user: dict = Depends(get_current_user_dep),
-):
+) -> list[TaskOut]:
     verify_event_ownership(event_id, current_user["id"])
 
     query = "SELECT * FROM tasks WHERE event_id = ?"
@@ -37,17 +37,17 @@ def list_tasks(
         rows = [dict(r) for r in cursor.fetchall()]
 
     results = []
-    for r in rows:
-        is_overdue, days_rem = evaluate_task(r)
-        r["is_overdue"] = is_overdue
-        r["days_remaining"] = days_rem
-        results.append(TaskOut(**r))
+    for task_row in rows:
+        is_overdue, days_rem = evaluate_task(task_row)
+        task_row["is_overdue"] = is_overdue
+        task_row["days_remaining"] = days_rem
+        results.append(TaskOut(**task_row))
 
     return results
 
 
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
-def create_task(event_id: str, task_in: TaskCreate, current_user: dict = Depends(get_current_user_dep)):
+def create_task(event_id: str, task_in: TaskCreate, current_user: dict = Depends(get_current_user_dep)) -> TaskOut:
     verify_event_ownership(event_id, current_user["id"])
     task_id = f"task_{uuid.uuid4().hex[:8]}"
 
@@ -86,7 +86,7 @@ def create_task(event_id: str, task_in: TaskCreate, current_user: dict = Depends
 @router.patch("/{task_id}", response_model=TaskOut)
 def update_task(
     event_id: str, task_id: str, task_update: TaskUpdate, current_user: dict = Depends(get_current_user_dep)
-):
+) -> TaskOut:
     verify_event_ownership(event_id, current_user["id"])
     update_data = task_update.model_dump(exclude_unset=True)
 
@@ -114,7 +114,7 @@ def update_task(
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_task(event_id: str, task_id: str, current_user: dict = Depends(get_current_user_dep)):
+def delete_task(event_id: str, task_id: str, current_user: dict = Depends(get_current_user_dep)) -> None:
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
@@ -124,7 +124,7 @@ def delete_task(event_id: str, task_id: str, current_user: dict = Depends(get_cu
 
 
 @router.get("/summary", response_model=TaskSummaryOut)
-def get_task_summary(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def get_task_summary(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> TaskSummaryOut:
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()

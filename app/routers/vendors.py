@@ -1,5 +1,6 @@
 import sqlite3
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -51,7 +52,7 @@ def sync_linked_budget_item(cursor: sqlite3.Cursor, budget_item_id: str | None, 
 
 
 @router.get("", response_model=list[VendorOut])
-def list_vendors(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def list_vendors(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> list[VendorOut]:
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
@@ -62,7 +63,7 @@ def list_vendors(event_id: str, current_user: dict = Depends(get_current_user_de
 @router.get("/semantic-search")
 def semantic_search_vendors(
     event_id: str, q: str, category: str | None = None, current_user: dict = Depends(get_current_user_dep)
-):
+) -> list[dict[str, Any]]:
     """
     Approximate text similarity search across user vendors saved for this specific event.
     Returns empty list if no matching user records exist.
@@ -77,7 +78,9 @@ def semantic_search_vendors(
 
 
 @router.post("", response_model=VendorOut, status_code=status.HTTP_201_CREATED)
-def create_vendor(event_id: str, vendor_in: VendorCreate, current_user: dict = Depends(get_current_user_dep)):
+def create_vendor(
+    event_id: str, vendor_in: VendorCreate, current_user: dict = Depends(get_current_user_dep)
+) -> VendorOut:
     verify_event_ownership(event_id, current_user["id"])
     vendor_id = f"vnd_{uuid.uuid4().hex[:8]}"
 
@@ -132,7 +135,7 @@ def create_vendor(event_id: str, vendor_in: VendorCreate, current_user: dict = D
 @router.patch("/{vendor_id}", response_model=VendorOut)
 def update_vendor(
     event_id: str, vendor_id: str, vendor_update: VendorUpdate, current_user: dict = Depends(get_current_user_dep)
-):
+) -> VendorOut:
     verify_event_ownership(event_id, current_user["id"])
     update_data = vendor_update.model_dump(exclude_unset=True)
 
@@ -177,7 +180,7 @@ def update_vendor(
 
 
 @router.delete("/{vendor_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_vendor(event_id: str, vendor_id: str, current_user: dict = Depends(get_current_user_dep)):
+def delete_vendor(event_id: str, vendor_id: str, current_user: dict = Depends(get_current_user_dep)) -> None:
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()

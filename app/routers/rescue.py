@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/api/events/{event_id}/rescue", tags=["Plan Rescue AI
 @router.post("/propose", response_model=PlanRescueProposal)
 def propose_rescue_plan(
     event_id: str, rescue_req: PlanRescueRequest, current_user: dict = Depends(get_current_user_dep)
-):
+) -> PlanRescueProposal:
     """
     Signature replanning workflow:
     1. Collects live stored event, budget, tasks, and vendors.
@@ -37,7 +38,7 @@ def propose_rescue_plan(
 @router.post("/apply")
 def apply_rescue_plan(
     event_id: str, apply_req: PlanRescueApplyRequest, current_user: dict = Depends(get_current_user_dep)
-):
+) -> dict[str, Any]:
     """
     Applies only user-approved modifications to persistent database records.
     Recalculates totals and maintains an audit log.
@@ -52,7 +53,7 @@ def apply_rescue_plan(
 
 
 @router.get("/history")
-def get_rescue_history(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def get_rescue_history(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> list[dict[str, Any]]:
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM events WHERE id = ? AND user_id = ?", (event_id, current_user["id"]))

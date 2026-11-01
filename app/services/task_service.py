@@ -61,9 +61,9 @@ def compute_task_summary(tasks: list[dict[str, Any]], today: date | None = None)
     todo_tasks = 0
     overdue_tasks = 0
 
-    for t in tasks:
-        status = (t.get("status") or "todo").lower()
-        is_overdue, _ = evaluate_task(t, today)
+    for task_item in tasks:
+        status = (task_item.get("status") or "todo").lower()
+        is_overdue, _ = evaluate_task(task_item, today)
 
         if status == "completed":
             completed_tasks += 1

@@ -20,31 +20,31 @@ def calculate_budget_summary(planned_budget: float, currency: str, items: list[d
     category_map: dict[str, dict[str, Any]] = {}
 
     for item in items:
-        est = float(item.get("estimated_amount", 0.0) or 0.0)
-        quo = float(item.get("quoted_amount", 0.0) or 0.0)
-        com = float(item.get("committed_amount", 0.0) or 0.0)
-        act = float(item.get("actual_amount", 0.0) or 0.0)
-        cat = str(item.get("category", "General") or "General").strip()
+        estimated_val = float(item.get("estimated_amount", 0.0) or 0.0)
+        quoted_val = float(item.get("quoted_amount", 0.0) or 0.0)
+        committed_val = float(item.get("committed_amount", 0.0) or 0.0)
+        actual_val = float(item.get("actual_amount", 0.0) or 0.0)
+        category_name = str(item.get("category", "General") or "General").strip()
 
-        total_estimated += est
-        total_quoted += quo
-        total_committed += com
-        total_actual += act
+        total_estimated += estimated_val
+        total_quoted += quoted_val
+        total_committed += committed_val
+        total_actual += actual_val
 
-        if cat not in category_map:
-            category_map[cat] = {
-                "category": cat,
+        if category_name not in category_map:
+            category_map[category_name] = {
+                "category": category_name,
                 "estimated_subtotal": 0.0,
                 "quoted_subtotal": 0.0,
                 "committed_subtotal": 0.0,
                 "actual_subtotal": 0.0,
                 "item_count": 0,
             }
-        category_map[cat]["estimated_subtotal"] += est
-        category_map[cat]["quoted_subtotal"] += quo
-        category_map[cat]["committed_subtotal"] += com
-        category_map[cat]["actual_subtotal"] += act
-        category_map[cat]["item_count"] += 1
+        category_map[category_name]["estimated_subtotal"] += estimated_val
+        category_map[category_name]["quoted_subtotal"] += quoted_val
+        category_map[category_name]["committed_subtotal"] += committed_val
+        category_map[category_name]["actual_subtotal"] += actual_val
+        category_map[category_name]["item_count"] += 1
 
     # Round all values to 2 decimal places to ensure precision
     total_estimated = round(total_estimated, 2)

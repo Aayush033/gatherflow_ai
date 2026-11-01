@@ -1,4 +1,5 @@
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/api/events/{event_id}/copilot", tags=["Generative AI
 
 
 @router.get("/history")
-def get_chat_history(event_id: str, current_user: dict = Depends(get_current_user_dep)):
+def get_chat_history(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> list[dict[str, Any]]:
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
@@ -26,7 +27,9 @@ def get_chat_history(event_id: str, current_user: dict = Depends(get_current_use
 
 
 @router.post("/chat", response_model=CopilotResponse)
-def chat_with_copilot(event_id: str, msg_in: CopilotMessage, current_user: dict = Depends(get_current_user_dep)):
+def chat_with_copilot(
+    event_id: str, msg_in: CopilotMessage, current_user: dict = Depends(get_current_user_dep)
+) -> CopilotResponse:
     event = verify_event_ownership(event_id, current_user["id"])
 
     with get_db() as conn:
@@ -40,10 +43,10 @@ def chat_with_copilot(event_id: str, msg_in: CopilotMessage, current_user: dict 
         # 2. Fetch tasks
         cursor.execute("SELECT * FROM tasks WHERE event_id = ?", (event_id,))
         tasks = [dict(r) for r in cursor.fetchall()]
-        for t in tasks:
-            is_overdue, days_rem = evaluate_task(t)
-            t["is_overdue"] = is_overdue
-            t["days_remaining"] = days_rem
+        for task_record in tasks:
+            is_overdue, days_rem = evaluate_task(task_record)
+            task_record["is_overdue"] = is_overdue
+            task_record["days_remaining"] = days_rem
 
         # 3. Fetch vendors
         cursor.execute("SELECT * FROM vendors WHERE event_id = ?", (event_id,))
