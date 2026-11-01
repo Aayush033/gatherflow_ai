@@ -1,3 +1,4 @@
+import logging
 import sqlite3
 import uuid
 from typing import Any
@@ -8,10 +9,13 @@ from app.auth_deps import get_current_user_dep, verify_event_ownership
 from app.database import get_db
 from app.schemas import VendorCreate, VendorOut, VendorUpdate
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/events/{event_id}/vendors", tags=["Vendor Organiser"])
 
 
 def verify_budget_item_belongs_to_event(cursor: sqlite3.Cursor, budget_item_id: str | None, event_id: str) -> None:
+    """Verifies that a referenced budget item exists and belongs to the given event."""
     if not budget_item_id:
         return
     cursor.execute("SELECT id FROM budget_items WHERE id = ? AND event_id = ?", (budget_item_id, event_id))
@@ -22,6 +26,7 @@ def verify_budget_item_belongs_to_event(cursor: sqlite3.Cursor, budget_item_id: 
 
 
 def sync_linked_budget_item(cursor: sqlite3.Cursor, budget_item_id: str | None, event_id: str) -> None:
+    """Reconciles committed and quoted figures on the linked budget item from vendor records."""
     if not budget_item_id:
         return
     # Recalculate committed amount from confirmed vendors linked to this item
@@ -53,6 +58,7 @@ def sync_linked_budget_item(cursor: sqlite3.Cursor, budget_item_id: str | None, 
 
 @router.get("", response_model=list[VendorOut])
 def list_vendors(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> list[VendorOut]:
+    """Lists all user vendor contacts recorded for the specified event."""
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
@@ -73,7 +79,8 @@ def semantic_search_vendors(
         from app.vector_db import search_vendors_text_similarity
 
         return search_vendors_text_similarity(query=q, event_id=event_id, category=category, n_results=5)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Vendor similarity search failed non-fatally: %s", exc)
         return []
 
 
@@ -81,6 +88,7 @@ def semantic_search_vendors(
 def create_vendor(
     event_id: str, vendor_in: VendorCreate, current_user: dict = Depends(get_current_user_dep)
 ) -> VendorOut:
+    """Creates a new vendor record and synchronizes any linked budget item."""
     verify_event_ownership(event_id, current_user["id"])
     vendor_id = f"vnd_{uuid.uuid4().hex[:8]}"
 
@@ -126,8 +134,8 @@ def create_vendor(
             from app.vector_db import index_user_vendor
 
             index_user_vendor(created_dict, event_id=event_id, user_id=current_user["id"])
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("ChromaDB vendor indexing non-blocking error: %s", exc)
 
         return VendorOut(**created_dict)
 
@@ -136,6 +144,7 @@ def create_vendor(
 def update_vendor(
     event_id: str, vendor_id: str, vendor_update: VendorUpdate, current_user: dict = Depends(get_current_user_dep)
 ) -> VendorOut:
+    """Updates vendor details and refreshes linked budget commitments."""
     verify_event_ownership(event_id, current_user["id"])
     update_data = vendor_update.model_dump(exclude_unset=True)
 
@@ -173,14 +182,15 @@ def update_vendor(
             from app.vector_db import index_user_vendor
 
             index_user_vendor(vendor_dict, event_id=event_id, user_id=current_user["id"])
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("ChromaDB vendor reindexing non-blocking error: %s", exc)
 
         return VendorOut(**vendor_dict)
 
 
 @router.delete("/{vendor_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_vendor(event_id: str, vendor_id: str, current_user: dict = Depends(get_current_user_dep)) -> None:
+    """Removes a vendor record and removes stale commitments from linked budget item."""
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
@@ -200,5 +210,5 @@ def delete_vendor(event_id: str, vendor_id: str, current_user: dict = Depends(ge
         from app.vector_db import delete_user_vendor
 
         delete_user_vendor(vendor_id)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("ChromaDB vendor deletion non-blocking error: %s", exc)

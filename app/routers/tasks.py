@@ -17,6 +17,7 @@ def list_tasks(
     category_filter: str | None = Query(None, alias="category"),
     current_user: dict = Depends(get_current_user_dep),
 ) -> list[TaskOut]:
+    """Retrieves all tasks for the event, optionally filtered by status or category."""
     verify_event_ownership(event_id, current_user["id"])
 
     query = "SELECT * FROM tasks WHERE event_id = ?"
@@ -48,6 +49,7 @@ def list_tasks(
 
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
 def create_task(event_id: str, task_in: TaskCreate, current_user: dict = Depends(get_current_user_dep)) -> TaskOut:
+    """Creates a new milestone checklist task with priority and due date."""
     verify_event_ownership(event_id, current_user["id"])
     task_id = f"task_{uuid.uuid4().hex[:8]}"
 
@@ -87,6 +89,7 @@ def create_task(event_id: str, task_in: TaskCreate, current_user: dict = Depends
 def update_task(
     event_id: str, task_id: str, task_update: TaskUpdate, current_user: dict = Depends(get_current_user_dep)
 ) -> TaskOut:
+    """Updates task status, dates, priority, or assignee."""
     verify_event_ownership(event_id, current_user["id"])
     update_data = task_update.model_dump(exclude_unset=True)
 
@@ -115,6 +118,7 @@ def update_task(
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(event_id: str, task_id: str, current_user: dict = Depends(get_current_user_dep)) -> None:
+    """Removes a task from the persistent database."""
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
@@ -125,6 +129,7 @@ def delete_task(event_id: str, task_id: str, current_user: dict = Depends(get_cu
 
 @router.get("/summary", response_model=TaskSummaryOut)
 def get_task_summary(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> TaskSummaryOut:
+    """Computes task completion percentage and overdue counts."""
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()

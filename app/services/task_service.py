@@ -5,6 +5,7 @@ from app.schemas import TaskSummaryOut
 
 
 def parse_date(date_str: str | None) -> date | None:
+    """Safely parses an ISO date string (YYYY-MM-DD) into a date object, returning None on failure."""
     if not date_str:
         return None
     try:

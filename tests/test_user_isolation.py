@@ -12,53 +12,53 @@ def test_user_data_isolation(client, test_user_headers, other_user_headers):
         "guest_count": 250,
         "budget": 1500000.0,
         "currency": "INR",
-        "theme": "Royal Rajasthani Heritage"
+        "theme": "Royal Rajasthani Heritage",
     }
     res_a = client.post("/api/events", json=create_payload, headers=test_user_headers)
     assert res_a.status_code == 201
     event_id = res_a.json()["id"]
-    
+
     # User A adds a budget item
-    bgt_a = client.post(
+    client.post(
         f"/api/events/{event_id}/budget/items",
         json={"category": "Venue", "item_name": "Heritage Courtyard", "estimated_amount": 500000.0},
-        headers=test_user_headers
+        headers=test_user_headers,
     ).json()
-    
+
     # User A adds a vendor
-    vnd_a = client.post(
+    client.post(
         f"/api/events/{event_id}/vendors",
         json={"name": "Palace Decorators", "category": "Decor", "quotation_amount": 100000.0},
-        headers=test_user_headers
+        headers=test_user_headers,
     ).json()
-    
+
     # 2. User A can list and retrieve the event
     list_res_a = client.get("/api/events", headers=test_user_headers)
     assert any(e["id"] == event_id for e in list_res_a.json())
-    
+
     get_res_a = client.get(f"/api/events/{event_id}", headers=test_user_headers)
     assert get_res_a.status_code == 200
-    
+
     # 3. User B attempts to access User A's event -> Must be 404
     get_res_b = client.get(f"/api/events/{event_id}", headers=other_user_headers)
     assert get_res_b.status_code == 404
-    
+
     # 4. User B lists events -> Must NOT see User A's event
     list_res_b = client.get("/api/events", headers=other_user_headers)
     assert not any(e["id"] == event_id for e in list_res_b.json())
-    
+
     # 5. User B attempts to access User A's blueprint -> Must be 404
     bp_res_b = client.get(f"/api/events/{event_id}/blueprint", headers=other_user_headers)
     assert bp_res_b.status_code == 404
-    
+
     # 6. User B attempts to access User A's budget items -> Must be 404
     bgt_res_b = client.get(f"/api/events/{event_id}/budget/items", headers=other_user_headers)
     assert bgt_res_b.status_code == 404
-    
+
     # 7. User B attempts to access User A's vendors -> Must be 404
     vnd_res_b = client.get(f"/api/events/{event_id}/vendors", headers=other_user_headers)
     assert vnd_res_b.status_code == 404
-    
+
     # 8. User B attempts to access User A's copilot chat messages -> Must be 404
     chat_res_b = client.get(f"/api/events/{event_id}/copilot/messages", headers=other_user_headers)
     assert chat_res_b.status_code == 404
@@ -67,17 +67,18 @@ def test_user_data_isolation(client, test_user_headers, other_user_headers):
     task_res_b = client.post(
         f"/api/events/{event_id}/tasks",
         json={"title": "Malicious Task", "category": "General"},
-        headers=other_user_headers
+        headers=other_user_headers,
     )
     assert task_res_b.status_code == 404
-    
+
     # 10. User B attempts to delete User A's event -> Must be 404
     del_res_b = client.delete(f"/api/events/{event_id}", headers=other_user_headers)
     assert del_res_b.status_code == 404
-    
+
     # 11. User A verifies event is intact
     get_res_a_after = client.get(f"/api/events/{event_id}", headers=test_user_headers)
     assert get_res_a_after.status_code == 200
+
 
 def test_unauthenticated_request_rejected(client):
     """
@@ -87,6 +88,7 @@ def test_unauthenticated_request_rejected(client):
     res = client.get("/api/events")
     assert res.status_code == 401
 
+
 def test_forged_session_token_rejected(client):
     """
     Verifies that supplying a forged, non-existent session token does NOT
@@ -94,3 +96,38 @@ def test_forged_session_token_rejected(client):
     """
     res = client.get("/api/events", headers={"X-Session-ID": "forged_non_existent_token_12345"})
     assert res.status_code == 401
+
+
+def test_session_revocation_on_logout(client, test_user_headers):
+    """
+    Verifies that calling /api/auth/logout revokes the session token in persistent
+    storage so subsequent requests with that token are rejected.
+    """
+    # 1. User can access protected route before logout
+    res_before = client.get("/api/events", headers=test_user_headers)
+    assert res_before.status_code == 200
+
+    # 2. User logs out
+    logout_res = client.post("/api/auth/logout", headers=test_user_headers)
+    assert logout_res.status_code == 200
+    assert logout_res.json()["message"] == "Logged out successfully"
+
+    # 3. Subsequent request with the previous token must be rejected (401)
+    res_after = client.get("/api/events", headers=test_user_headers)
+    assert res_after.status_code == 401
+
+
+def test_test_database_isolation_active(client):
+    """
+    Verifies mandatory test database isolation:
+    All database operations in tests MUST point to the isolated temporary
+    SQLite database, never touching the real gatherflow.db.
+    """
+    from app.config import settings
+    from app.database import get_db_path
+
+    active_path = get_db_path()
+    prod_path = settings.BASE_DIR / "gatherflow.db"
+
+    assert active_path != prod_path, f"Active DB {active_path} must not be production {prod_path}"
+    assert "test" in str(active_path).lower() or "tmp" in str(active_path).lower()

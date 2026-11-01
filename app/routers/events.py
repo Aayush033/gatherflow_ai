@@ -7,6 +7,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth_deps import get_current_user_dep
+from app.data.demo_showcase_data import (
+    get_demo_budget_items,
+    get_demo_event_payload,
+    get_demo_plan_payload,
+    get_demo_rescue_log,
+    get_demo_tasks,
+    get_demo_vendors,
+)
 from app.database import get_db
 from app.schemas import EventCreate, EventOut, EventPlanOut, EventUpdate
 from app.services import ai_service
@@ -83,14 +91,9 @@ def create_event(event_in: EventCreate, current_user: dict = Depends(get_current
 @router.post("/demo-showcase", response_model=EventOut, status_code=status.HTTP_201_CREATED)
 def seed_demo_showcase_event(current_user: dict = Depends(get_current_user_dep)) -> EventOut:
     """
-    Creates or resets a complete, rich demonstration event for evaluators and judges.
-    Instantly populates a realistic 250-guest corporate gala with:
-    - AI Event Blueprint & 4 Milestones
-    - 4-Tier Budget Items ($50k budget, paid, committed, quoted, planned items)
-    - Milestone Checklist Tasks across priorities
-    - Linked Vendors indexed in ChromaDB
-    - Pre-staged Plan Rescue Incident
-    Enables judges to test the entire application in under 2 seconds.
+    Creates or resets a complete demonstration event for evaluators and judges.
+    Populates an isolated 250-guest corporate gala with blueprint, budget tiers,
+    milestone tasks, linked vendor records, and pre-staged plan rescue log.
     """
     user_id = current_user["id"]
     event_id = f"evt_demo_{user_id[:8]}"
@@ -111,403 +114,67 @@ def seed_demo_showcase_event(current_user: dict = Depends(get_current_user_dep))
         # 2. Insert Showcase Event
         cursor.execute(
             """
-        INSERT INTO events (
-            id, user_id, title, event_type, date, time_details, location,
-            venue_preferences, guest_count, budget, currency, theme,
-            cultural_preferences, dietary_accessibility, priorities_constraints
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-            (
-                event_id,
-                user_id,
-                "🌟 Global Tech & Innovation Gala 2026",
-                "corporate",
-                event_date,
-                "18:00 - 23:30 (Keynote at 19:15, Banquet Dinner at 20:30)",
-                "Metropolitan Convention Center — Grand Ballroom, Hall A",
-                "Full A/V setup, motorized projection walls, dual catering prep kitchens",
-                250,
-                50000.0,
-                "USD",
-                "Modern Cyber Elegance & Luminescent Architecture",
-                "International business formal, multilingual greeting materials",
-                "35 Vegan/GF pre-registered; ADA compliant ramps to all stages",
-                "Zero audiovisual latency, strict $50,000 budget cap, executive VIP lounge",
-            ),
+            INSERT INTO events (
+                id, user_id, title, event_type, date, time_details, location,
+                venue_preferences, guest_count, budget, currency, theme,
+                cultural_preferences, dietary_accessibility, priorities_constraints
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            get_demo_event_payload(event_id, user_id, event_date),
         )
 
-        # 3. Insert Blueprint Plan
-        budget_allocations = [
-            {
-                "category": "Venue",
-                "percentage": 30.0,
-                "estimated_amount": 15000.0,
-                "description": "Grand ballroom & VIP green room rental",
-            },
-            {
-                "category": "Catering",
-                "percentage": 36.0,
-                "estimated_amount": 18000.0,
-                "description": "Executive 4-course dinner & open bar package",
-            },
-            {
-                "category": "Audiovisual",
-                "percentage": 17.0,
-                "estimated_amount": 8500.0,
-                "description": "Concert-grade sound & dual 4K LED walls",
-            },
-            {
-                "category": "Entertainment",
-                "percentage": 9.0,
-                "estimated_amount": 4500.0,
-                "description": "Keynote speaker honorarium & travel",
-            },
-            {
-                "category": "Decor",
-                "percentage": 8.0,
-                "estimated_amount": 4000.0,
-                "description": "Luminescent centerpieces & ambient uplighting",
-            },
-        ]
-        milestones = [
-            {
-                "milestone": "Contracts & Venue Deposit Finalized",
-                "target_days_before": 45,
-                "description": "Lock space and liability insurance",
-            },
-            {
-                "milestone": "Vendor Technical Rehearsal Lock",
-                "target_days_before": 14,
-                "description": "Final sound checks and culinary tastings",
-            },
-            {
-                "milestone": "VIP Invitation Roster Confirmation",
-                "target_days_before": 7,
-                "description": "Seat assignments and dietary badges",
-            },
-            {
-                "milestone": "Gala Day Execution & Live Stage Runs",
-                "target_days_before": 0,
-                "description": "On-site command center operations",
-            },
-        ]
-        checklist = [
-            {
-                "task": "Execute Grand Ballroom Lease & Liability Insurance",
-                "category": "Venue",
-                "suggested_days_before": 35,
-                "priority": "high",
-            },
-            {
-                "task": "Approve Audio/Visual Rider & LED Wall Schematics",
-                "category": "Audiovisual",
-                "suggested_days_before": 20,
-                "priority": "high",
-            },
-            {
-                "task": "Complete VIP Catering Menu Tasting & Dietary List",
-                "category": "Catering",
-                "suggested_days_before": 18,
-                "priority": "high",
-            },
-            {
-                "task": "Send QR-Code Entry Passes to 250 Registered Guests",
-                "category": "Logistics",
-                "suggested_days_before": 10,
-                "priority": "medium",
-            },
-            {
-                "task": "Full Production Stage Rehearsal & Lighting Cues",
-                "category": "Production",
-                "suggested_days_before": 1,
-                "priority": "high",
-            },
-            {
-                "task": "Post-Gala Financial Reconciliation & Deposit Return",
-                "category": "Finance",
-                "suggested_days_before": -3,
-                "priority": "low",
-            },
-        ]
+        # 3. Insert Blueprint Plan (honestly marked as pre-staged template)
         cursor.execute(
             """
-        INSERT OR REPLACE INTO event_plans (
-            id, event_id, concept, theme_details, budget_allocation_json,
-            timeline_milestones_json, checklist_json, vendor_categories_json,
-            risks_json, contingencies_json, next_actions_json, is_ai_generated
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-        """,
-            (
-                f"plan_demo_{user_id[:8]}",
-                event_id,
-                "A flagship corporate celebration blending executive networking, keynote thought leadership, and cinematic audiovisual immersion. Structured into three strategic phases: Welcome Cocktail Reception, Keynote & Awards, and Interactive Networking Gala.",
-                "Deep obsidian and navy base accented by warm amber uplighting and frosted glass installations. Sustainable digital signage and branded interactive touchpoints throughout.",
-                json.dumps(budget_allocations),
-                json.dumps(milestones),
-                json.dumps(checklist),
-                json.dumps(["Venue", "Catering", "Audiovisual", "Entertainment", "Decor"]),
-                json.dumps(
-                    [
-                        "High demand for A/V engineers during conference week",
-                        "Severe weather causing airport transit delays for VIP speakers",
-                        "Dietary overflow requiring on-demand kitchen adjustments",
-                    ]
-                ),
-                json.dumps(
-                    [
-                        "Secondary A/V production team on 2-hour standby retainer",
-                        "Pre-arranged 10% banquet buffer with catering director",
-                        "Dual remote fiber link for live virtual keynote fallback",
-                    ]
-                ),
-                json.dumps(
-                    [
-                        {
-                            "action": "Review signed technical rider with Apex AV Productions",
-                            "priority": "high",
-                            "timeline": "This week",
-                        },
-                        {
-                            "action": "Conduct final dietary count verification",
-                            "priority": "medium",
-                            "timeline": "Next week",
-                        },
-                    ]
-                ),
-            ),
+            INSERT OR REPLACE INTO event_plans (
+                id, event_id, concept, theme_details, budget_allocation_json,
+                timeline_milestones_json, checklist_json, vendor_categories_json,
+                risks_json, contingencies_json, next_actions_json, is_ai_generated
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            get_demo_plan_payload(f"plan_demo_{user_id[:8]}", event_id),
         )
 
         # 4. Insert 4-Tier Budget Items
-        b_venue = f"bgt_demo_venue_{user_id[:6]}"
-        b_cater = f"bgt_demo_cater_{user_id[:6]}"
-        b_av = f"bgt_demo_av_{user_id[:6]}"
-        b_keynote = f"bgt_demo_key_{user_id[:6]}"
-        b_decor = f"bgt_demo_dec_{user_id[:6]}"
-
-        budget_rows = [
-            (
-                b_venue,
-                event_id,
-                "Venue",
-                "Grand Ballroom & VIP Suite",
-                15000.0,
-                15000.0,
-                15000.0,
-                15000.0,
-                "paid",
-                "Fully settled. Security deposit refundable.",
-            ),
-            (
-                b_cater,
-                event_id,
-                "Catering",
-                "Executive 4-Course Banquet & Bar",
-                18000.0,
-                17500.0,
-                0.0,
-                0.0,
-                "quoted",
-                "Quote from Savor Gourmet Catering for 250 guests.",
-            ),
-            (
-                b_av,
-                event_id,
-                "Audiovisual",
-                "Concert Sound, Dual 4K LED Walls & Truss",
-                8500.0,
-                7800.0,
-                7800.0,
-                0.0,
-                "committed",
-                "Contract executed with Apex AV Productions.",
-            ),
-            (
-                b_keynote,
-                event_id,
-                "Entertainment",
-                "Keynote Speaker Honorarium & VIP Travel",
-                4500.0,
-                0.0,
-                0.0,
-                0.0,
-                "planned",
-                "Targeting industry pioneer; legal contract draft under review.",
-            ),
-            (
-                b_decor,
-                event_id,
-                "Decor",
-                "Luminescent Uplighting & Table Centerpieces",
-                4000.0,
-                3800.0,
-                0.0,
-                0.0,
-                "quoted",
-                "Includes setup and strike by 01:00.",
-            ),
-        ]
+        budget_rows, b_av_id, b_cater_id = get_demo_budget_items(event_id, user_id)
         for row in budget_rows:
             cursor.execute(
                 """
-            INSERT OR REPLACE INTO budget_items (id, event_id, category, item_name, estimated_amount, quoted_amount, committed_amount, actual_amount, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
+                INSERT OR REPLACE INTO budget_items (id, event_id, category, item_name, estimated_amount, quoted_amount, committed_amount, actual_amount, status, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
                 row,
             )
 
         # 5. Insert Milestone Tasks
-        tasks_data = [
-            (
-                f"tsk_demo_1_{user_id[:6]}",
-                event_id,
-                "Secure Grand Ballroom Lease & Liability Insurance",
-                "Venue",
-                (today + timedelta(days=10)).isoformat(),
-                "high",
-                "completed",
-                "Executed and paid in full.",
-            ),
-            (
-                f"tsk_demo_2_{user_id[:6]}",
-                event_id,
-                "Approve Audio/Visual Rider & LED Wall Schematics",
-                "Audiovisual",
-                (today + timedelta(days=25)).isoformat(),
-                "high",
-                "in_progress",
-                "Marcus Vance coordinating crew schedule.",
-            ),
-            (
-                f"tsk_demo_3_{user_id[:6]}",
-                event_id,
-                "Complete VIP Catering Menu Tasting & Dietary List",
-                "Catering",
-                (today + timedelta(days=27)).isoformat(),
-                "high",
-                "in_progress",
-                "Chef Elena confirmed 35 vegan/GF courses.",
-            ),
-            (
-                f"tsk_demo_4_{user_id[:6]}",
-                event_id,
-                "Send QR-Code Entry Passes to 250 Registered Guests",
-                "Logistics",
-                (today + timedelta(days=35)).isoformat(),
-                "medium",
-                "completed",
-                "Automated digital invitations sent.",
-            ),
-            (
-                f"tsk_demo_5_{user_id[:6]}",
-                event_id,
-                "Full Production Stage Rehearsal & Lighting Cues",
-                "Production",
-                (today + timedelta(days=44)).isoformat(),
-                "high",
-                "todo",
-                "Scheduled for 16:00 day before event.",
-            ),
-            (
-                f"tsk_demo_6_{user_id[:6]}",
-                event_id,
-                "Post-Gala Financial Reconciliation & Deposit Return",
-                "Finance",
-                (today + timedelta(days=48)).isoformat(),
-                "low",
-                "todo",
-                "Review final supplier invoices against commitments.",
-            ),
-        ]
-        for t in tasks_data:
+        for task_row in get_demo_tasks(event_id, user_id, today):
             cursor.execute(
                 """
-            INSERT OR REPLACE INTO tasks (id, event_id, title, category, due_date, priority, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-                t,
+                INSERT OR REPLACE INTO tasks (id, event_id, title, category, due_date, priority, status, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                task_row,
             )
 
         # 6. Insert User Vendors linked to budget lines
-        v_av_id = f"vnd_demo_av_{user_id[:6]}"
-        v_cater_id = f"vnd_demo_cat_{user_id[:6]}"
-        vendors_data = [
-            (
-                v_av_id,
-                event_id,
-                "Apex Audiovisuals & Production",
-                "Audiovisual",
-                "Marcus Vance",
-                "+1 (555) 234-5678",
-                "marcus@apexav.example.com",
-                7800.0,
-                "confirmed",
-                "Verified supplier. Includes 3 dedicated on-site sound engineers.",
-                b_av,
-            ),
-            (
-                v_cater_id,
-                event_id,
-                "Savor Gourmet Catering & Events",
-                "Catering",
-                "Elena Rostova",
-                "+1 (555) 876-5432",
-                "elena@savorcater.example.com",
-                17500.0,
-                "quoted",
-                "Full plated service + bar package for 250 attendees.",
-                b_cater,
-            ),
-        ]
-        for v in vendors_data:
+        vendor_rows, vector_vendors = get_demo_vendors(event_id, user_id, b_av_id, b_cater_id)
+        for v_row in vendor_rows:
             cursor.execute(
                 """
-            INSERT OR REPLACE INTO vendors (id, event_id, name, category, contact_person, contact_phone, contact_email, quotation_amount, status, notes, linked_budget_item_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-                v,
+                INSERT OR REPLACE INTO vendors (id, event_id, name, category, contact_person, contact_phone, contact_email, quotation_amount, status, notes, linked_budget_item_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                v_row,
             )
 
-        # 7. Pre-stage a Plan Rescue Incident Proposal
+        # 7. Pre-stage Plan Rescue Incident Proposal
         rescue_id = f"rsc_demo_{user_id[:8]}"
-        rescue_proposal = {
-            "incident": "Lead Keynote Speaker canceled due to international flight disruption 4 days before gala.",
-            "impact_assessment": "High programmatic visibility impact. No immediate financial penalty as speaker agreement included force majeure flight disruption clause.",
-            "recommended_strategy": "Activate verified local keynote speaker on pre-cleared backup list; shift $1,000 speaker budget savings toward expedited presentation rehearsal.",
-            "budget_adjustments": [
-                {
-                    "category": "Entertainment",
-                    "item_name": "Keynote Speaker (Local Alternative)",
-                    "amount_change": -1000.0,
-                    "rationale": "Local speaker honorarium is $3,500 vs $4,500 allocated (saves $1,000)",
-                },
-                {
-                    "category": "Audiovisual",
-                    "item_name": "Expedited Slide Rehearsal Support",
-                    "amount_change": 300.0,
-                    "rationale": "Extra 1-hr technician setup for slide reformatting",
-                },
-            ],
-            "timeline_adjustments": [
-                {
-                    "task": "Conduct Emergency Keynote Virtual Onboarding & Audio Check",
-                    "due_date": (today + timedelta(days=42)).isoformat(),
-                    "action": "add",
-                }
-            ],
-            "guest_impact": "Zero disruption to gala schedule; attendees receive full keynote programming as planned.",
-        }
         cursor.execute(
             """
-        INSERT INTO plan_rescue_logs (id, event_id, scenario_description, proposal_summary, full_proposal_json, applied)
-        VALUES (?, ?, ?, ?, ?, 0)
-        """,
-            (
-                rescue_id,
-                event_id,
-                "Lead Keynote Speaker canceled due to international flight disruption 4 days before gala.",
-                "Activate verified local keynote speaker on pre-cleared backup list; saves $1,000.",
-                json.dumps(rescue_proposal),
-            ),
+            INSERT INTO plan_rescue_logs (id, event_id, scenario_description, proposal_summary, full_proposal_json, applied)
+            VALUES (?, ?, ?, ?, ?, 0)
+            """,
+            get_demo_rescue_log(rescue_id, event_id, today),
         )
 
         cursor.execute("SELECT * FROM events WHERE id = ?", (event_id,))
@@ -515,28 +182,8 @@ def seed_demo_showcase_event(current_user: dict = Depends(get_current_user_dep))
 
     # Index the vendors into ChromaDB
     try:
-        index_user_vendor(
-            {
-                "id": v_av_id,
-                "name": "Apex Audiovisuals & Production",
-                "category": "Audiovisual",
-                "quotation_amount": 7800.0,
-                "notes": "Verified supplier. Includes 3 dedicated on-site sound engineers.",
-            },
-            event_id=event_id,
-            user_id=user_id,
-        )
-        index_user_vendor(
-            {
-                "id": v_cater_id,
-                "name": "Savor Gourmet Catering & Events",
-                "category": "Catering",
-                "quotation_amount": 17500.0,
-                "notes": "Full plated service + bar package for 250 attendees.",
-            },
-            event_id=event_id,
-            user_id=user_id,
-        )
+        for v_item in vector_vendors:
+            index_user_vendor(v_item, event_id=event_id, user_id=user_id)
     except Exception as e:
         logger.warning("Could not index demo vendors into ChromaDB: %s", e)
 

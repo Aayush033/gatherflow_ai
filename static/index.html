@@ -52,9 +52,9 @@
             <option value="zh">中文</option>
             <option value="ar">العربية</option>
           </select>
-          <button id="btn-home-quick-eval" class="btn btn-primary btn-sm" data-i18n="btn_evaluator">&#9889; Enter as Evaluator</button>
+          <button id="btn-home-quick-eval" class="btn btn-primary btn-sm" data-i18n="btn_evaluator" aria-label="Enter as Evaluator">&#9889; Enter as Evaluator</button>
           <button id="btn-home-demo" class="btn btn-ghost btn-sm"
-            style="border:1px solid var(--primary); color:var(--primary); font-weight:600;" data-i18n="btn_demo">&#127775; Load Demo Event (Judges)</button>
+            style="border:1px solid var(--primary); color:var(--primary); font-weight:600;" data-i18n="btn_demo" aria-label="Load Demo Event for Judges">&#127775; Load Demo Event (Judges)</button>
           <button id="btn-home-guest" class="btn btn-ghost btn-sm" data-i18n="btn_guest">Guest Sandbox</button>
         </div>
       </header>
@@ -71,7 +71,7 @@
           style="margin-top:1.5rem; display:inline-flex; align-items:center; gap:1rem; background:var(--bg-card); padding:0.6rem 1.25rem; border-radius:99px; border:1px solid var(--border-active);">
           <span style="font-size:0.875rem; color:var(--text-secondary)">Current Session: <strong id="home-user-name"
               style="color:var(--primary)">Planner</strong></span>
-          <button id="btn-home-resume" class="btn btn-primary btn-sm" data-i18n="btn_enter_studio">&#9654; Enter Studio</button>
+          <button id="btn-home-resume" class="btn btn-primary btn-sm" data-i18n="btn_enter_studio" aria-label="Enter Studio">&#9654; Enter Studio</button>
         </div>
       </section>
 
@@ -99,12 +99,12 @@
             </div>
             <div id="eval-login-status" class="setup-status hidden" role="status"></div>
             <div class="portal-actions">
-              <button type="button" id="btn-login-evaluator-submit" class="btn btn-primary btn-full" data-i18n="btn_eval_submit">&#9889; Enter as
+              <button type="button" id="btn-login-evaluator-submit" class="btn btn-primary btn-full" data-i18n="btn_eval_submit" aria-label="Enter as Evaluator">&#9889; Enter as
                 Evaluator (1-Click)</button>
               <button type="button" id="btn-login-demo-submit" class="btn btn-ghost btn-full"
-                style="border:1px dashed var(--primary); color:var(--primary); font-weight:600;" data-i18n="btn_demo_submit">&#127775; Load Demo
+                style="border:1px dashed var(--primary); color:var(--primary); font-weight:600;" data-i18n="btn_demo_submit" aria-label="Load Demo Showcase Event">&#127775; Load Demo
                 Showcase Event (Judges)</button>
-              <button type="button" id="btn-login-guest-submit" class="btn btn-ghost btn-full" data-i18n="btn_guest_submit">&#128100; Continue as
+              <button type="button" id="btn-login-guest-submit" class="btn btn-ghost btn-full" data-i18n="btn_guest_submit" aria-label="Continue as Guest">&#128100; Continue as
                 Guest (Sandboxed)</button>
             </div>
           </form>
@@ -142,7 +142,7 @@
               </div>
             </div>
             <div class="portal-actions">
-              <button type="button" id="btn-skip-setup" class="btn btn-primary btn-full" data-i18n="btn_guest_full">&#128100; Continue as Guest (Sandboxed)</button>
+              <button type="button" id="btn-skip-setup" class="btn btn-primary btn-full" data-i18n="btn_guest_full" aria-label="Continue as Guest">&#128100; Continue as Guest (Sandboxed)</button>
             </div>
           </div>
         </div>
@@ -222,7 +222,7 @@
         <ul id="event-list-sidebar" class="event-list" role="list">
           <li class="event-list-empty" data-i18n="sidebar_no_events">No events yet</li>
         </ul>
-        <button id="btn-new-event" class="btn btn-primary btn-sm btn-full" data-i18n="btn_new_event">+ New Event</button>
+        <button id="btn-new-event" class="btn btn-primary btn-sm btn-full" data-i18n="btn_new_event" aria-label="Create new event">+ New Event</button>
         <button id="btn-sidebar-demo" class="btn btn-ghost btn-sm btn-full"
           style="margin-top:0.4rem; border:1px dashed var(--border-active); color:var(--primary); font-size:0.8rem;" data-i18n="btn_load_demo">&#127775;
           Load Demo Event</button>
@@ -321,7 +321,7 @@
               <div class="nba-content">
                 <h4 id="nba-title" class="nba-title">Loading...</h4>
                 <p id="nba-description" class="nba-desc">--</p>
-                <button id="btn-nba-action" class="btn btn-primary btn-sm">Go &#8594;</button>
+                <button id="btn-nba-action" class="btn btn-primary btn-sm" aria-label="Go to next best action">Go &#8594;</button>
               </div>
             </div>
             <div class="stats-row">
@@ -400,7 +400,7 @@
                   <div class="form-group"><label class="form-label" for="scenario-extra-cost">Additional
                       Expense</label><input type="number" id="scenario-extra-cost" class="form-input" value="0"
                       step="100" min="0" /></div>
-                  <button type="submit" class="btn btn-primary btn-full" id="btn-run-scenario">&#9889; Run
+                  <button type="submit" class="btn btn-primary btn-full" id="btn-run-scenario" aria-label="Run What-If budget scenario">&#9889; Run
                     What-If</button>
                 </form>
                 <div id="scenario-result" class="scenario-result hidden" role="status" aria-live="polite"></div>

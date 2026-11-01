@@ -9,6 +9,7 @@ from google.genai.errors import APIError
 from app.config import settings
 from app.schemas import (
     EventPlanData,
+    PlanRescueRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,12 @@ def get_genai_client(api_key_override: str | None = None, timeout_ms: int = 4500
     return genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=timeout_ms))
 
 
-def call_gemini_with_resilience(client: genai.Client, model: str, contents: Any, config: Any | None = None) -> Any:
+def call_gemini_with_resilience(
+    client: genai.Client,
+    model: str,
+    contents: str | list[str],
+    config: types.GenerateContentConfig | None = None,
+) -> types.GenerateContentResponse:
     """
     Executes Gemini content generation with high resilience.
     1. First attempts with the configured primary model (gemini-3.8-flash).
@@ -85,6 +91,82 @@ def call_gemini_with_resilience(client: genai.Client, model: str, contents: Any,
     raise AIServiceError("Google Gemini servers are temporarily unreachable. Please retry.")
 
 
+def _build_health_status(
+    status: str,
+    connected: bool,
+    key_configured: bool,
+    message: str,
+) -> dict[str, Any]:
+    """Constructs a standardized health-check response payload."""
+    return {
+        "status": status,
+        "model": settings.GEMINI_MODEL,
+        "connected": connected,
+        "key_configured": key_configured,
+        "message": message,
+    }
+
+
+def _classify_api_error(error: APIError) -> dict[str, Any]:
+    """Maps a Gemini APIError to a structured health-check status."""
+    err_msg = str(error).lower()
+    code = getattr(error, "code", None)
+    if code == 429 or "resource_exhausted" in err_msg or "quota" in err_msg:
+        return _build_health_status(
+            "quota_exhausted",
+            False,
+            True,
+            "Key is valid, but Gemini account quota has been reached (HTTP 429). The app remains fully functional in offline/deterministic mode.",
+        )
+    if code == 503 or "high demand" in err_msg or "unavailable" in err_msg:
+        return _build_health_status(
+            "unavailable",
+            False,
+            True,
+            "Google capacity is currently experiencing a temporary demand spike (HTTP 503).",
+        )
+    if code == 504 or "deadline" in err_msg:
+        return _build_health_status(
+            "timeout",
+            False,
+            True,
+            "Google servers timed out (HTTP 504 Deadline Exceeded). Spikes in demand are temporary.",
+        )
+    logger.error("Google GenAI APIError: %s", error)
+    return _build_health_status(
+        "error",
+        False,
+        True,
+        f"AI model request rejected: {str(error)[:180]}",
+    )
+
+
+def _classify_generic_error(error: Exception) -> dict[str, Any]:
+    """Maps a non-API exception to a structured health-check status."""
+    logger.error("GenAI connection error: %s", error)
+    err_msg = str(error).lower()
+    if "deadline" in err_msg or "timeout" in err_msg or "timed out" in err_msg:
+        return _build_health_status(
+            "timeout",
+            False,
+            True,
+            "Connection check timed out after 10s. Network connection is slow or Google servers are busy.",
+        )
+    if "429" in err_msg or "resource_exhausted" in err_msg or "quota" in err_msg:
+        return _build_health_status(
+            "quota_exhausted",
+            False,
+            True,
+            "Key is valid, but Gemini account quota has been reached (HTTP 429). The app remains fully functional in offline/deterministic mode.",
+        )
+    return _build_health_status(
+        "error",
+        False,
+        True,
+        f"Connection check error: {str(error)[:180]}",
+    )
+
+
 def check_model_health(api_key_override: str | None = None) -> dict[str, Any]:
     """
     Performs a genuine live connectivity check against the Gemini API.
@@ -93,96 +175,30 @@ def check_model_health(api_key_override: str | None = None) -> dict[str, Any]:
     """
     api_key = (api_key_override or settings.GEMINI_API_KEY or "").strip()
     if not api_key:
-        return {
-            "status": "unconfigured",
-            "model": settings.GEMINI_MODEL,
-            "connected": False,
-            "key_configured": False,
-            "message": "Gemini API key is not configured.",
-        }
+        return _build_health_status("unconfigured", False, False, "Gemini API key is not configured.")
 
     try:
         client = get_genai_client(api_key_override=api_key, timeout_ms=10000)
-        # Fast, genuine Google API validation: verifies key against live Google GenAI catalog
         models_iter = client.models.list()
         first_model = next(iter(models_iter), None)
 
         if first_model:
-            return {
-                "status": "connected",
-                "model": settings.GEMINI_MODEL,
-                "connected": True,
-                "key_configured": True,
-                "message": f"Successfully verified live connection to Gemini API ({settings.GEMINI_MODEL}).",
-            }
-        else:
-            return {
-                "status": "empty_response",
-                "model": settings.GEMINI_MODEL,
-                "connected": False,
-                "key_configured": True,
-                "message": "Model catalog responded but returned empty list.",
-            }
-    except APIError as e:
-        err_msg = str(e).lower()
-        if getattr(e, "code", None) == 429 or "resource_exhausted" in err_msg or "quota" in err_msg:
-            return {
-                "status": "quota_exhausted",
-                "model": settings.GEMINI_MODEL,
-                "connected": False,
-                "key_configured": True,
-                "message": "Key is valid, but Gemini account quota has been reached (HTTP 429). The app remains fully functional in offline/deterministic mode.",
-            }
-        if getattr(e, "code", None) == 503 or "high demand" in err_msg or "unavailable" in err_msg:
-            return {
-                "status": "unavailable",
-                "model": settings.GEMINI_MODEL,
-                "connected": False,
-                "key_configured": True,
-                "message": "Google capacity is currently experiencing a temporary demand spike (HTTP 503).",
-            }
-        if getattr(e, "code", None) == 504 or "deadline" in err_msg:
-            return {
-                "status": "timeout",
-                "model": settings.GEMINI_MODEL,
-                "connected": False,
-                "key_configured": True,
-                "message": "Google servers timed out (HTTP 504 Deadline Exceeded). Spikes in demand are temporary.",
-            }
-        logger.error("Google GenAI APIError: %s", e)
-        return {
-            "status": "error",
-            "model": settings.GEMINI_MODEL,
-            "connected": False,
-            "key_configured": True,
-            "message": f"AI model request rejected: {str(e)[:180]}",
-        }
-    except Exception as e:
-        logger.error("GenAI connection error: %s", e)
-        err_msg = str(e).lower()
-        if "deadline" in err_msg or "timeout" in err_msg or "timed out" in err_msg:
-            return {
-                "status": "timeout",
-                "model": settings.GEMINI_MODEL,
-                "connected": False,
-                "key_configured": True,
-                "message": "Connection check timed out after 10s. Network connection is slow or Google servers are busy.",
-            }
-        if "429" in err_msg or "resource_exhausted" in err_msg or "quota" in err_msg:
-            return {
-                "status": "quota_exhausted",
-                "model": settings.GEMINI_MODEL,
-                "connected": False,
-                "key_configured": True,
-                "message": "Key is valid, but Gemini account quota has been reached (HTTP 429). The app remains fully functional in offline/deterministic mode.",
-            }
-        return {
-            "status": "error",
-            "model": settings.GEMINI_MODEL,
-            "connected": False,
-            "key_configured": True,
-            "message": f"Connection check error: {str(e)[:180]}",
-        }
+            return _build_health_status(
+                "connected",
+                True,
+                True,
+                f"Successfully verified live connection to Gemini API ({settings.GEMINI_MODEL}).",
+            )
+        return _build_health_status(
+            "empty_response",
+            False,
+            True,
+            "Model catalog responded but returned empty list.",
+        )
+    except APIError as api_err:
+        return _classify_api_error(api_err)
+    except Exception as exc:
+        return _classify_generic_error(exc)
 
 
 def generate_initial_event_plan(event_data: dict[str, Any]) -> EventPlanData:
@@ -275,7 +291,7 @@ def generate_plan_rescue_proposal(
     budget_summary: dict[str, Any],
     tasks: list[dict[str, Any]],
     vendors: list[dict[str, Any]],
-    scenario: Any,
+    scenario: PlanRescueRequest,
     playbooks: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """

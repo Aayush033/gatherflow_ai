@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -6,6 +7,9 @@ from app.config import settings
 
 
 def get_db_path() -> Path:
+    """Returns active SQLite path, ensuring strict isolation for test environments."""
+    if settings.ENVIRONMENT == "test" or os.getenv("TESTING") == "1":
+        return settings.DATABASE_PATH
     db_url = settings.DATABASE_URL
     if db_url and db_url.startswith("sqlite:///"):
         path_part = db_url[len("sqlite:///") :]

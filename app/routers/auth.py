@@ -107,7 +107,20 @@ def evaluator_login(req: EvaluatorLoginRequest, response: Response) -> UserOut:
 
 
 @router.post("/logout")
-def logout(response: Response) -> dict[str, str]:
-    """Clears the session cookie."""
+def logout(
+    response: Response,
+    gatherflow_session: str | None = Cookie(None),
+    x_session_id: str | None = Header(None),
+) -> dict[str, str]:
+    """Clears the session cookie and revokes the active session token in persistent storage."""
+    token = gatherflow_session or (x_session_id if settings.ENVIRONMENT != "production" else None)
+    if token:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            revoked_placeholder = f"revoked_{secrets.token_hex(16)}"
+            cursor.execute(
+                "UPDATE users SET session_token = ? WHERE session_token = ?",
+                (revoked_placeholder, token),
+            )
     response.delete_cookie(key=settings.SESSION_COOKIE_NAME, path="/")
     return {"message": "Logged out successfully"}

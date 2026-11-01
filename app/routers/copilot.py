@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import Any
 
@@ -11,11 +12,14 @@ from app.services.ai_service import AIServiceError
 from app.services.budget_service import calculate_budget_summary
 from app.services.task_service import evaluate_task
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/events/{event_id}/copilot", tags=["Generative AI Event Copilot"])
 
 
 @router.get("/history")
 def get_chat_history(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> list[dict[str, Any]]:
+    """Retrieves chronological conversation history for the specified event."""
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
@@ -30,6 +34,7 @@ def get_chat_history(event_id: str, current_user: dict = Depends(get_current_use
 def chat_with_copilot(
     event_id: str, msg_in: CopilotMessage, current_user: dict = Depends(get_current_user_dep)
 ) -> CopilotResponse:
+    """Interacts with the AI Copilot using active event context and ChromaDB RAG memory."""
     event = verify_event_ownership(event_id, current_user["id"])
 
     with get_db() as conn:
@@ -77,8 +82,8 @@ def chat_with_copilot(
 
         rag_knowledge = search_knowledge_semantic(msg_in.message, n_results=2)
         rag_vendors = search_vendors_semantic(msg_in.message, n_results=2)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("ChromaDB vector retrieval skipped or unavailable: %s", exc)
 
     # 6. Call Gemini
     try:

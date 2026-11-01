@@ -97,6 +97,143 @@ def create_rescue_proposal(event_id: str, request: PlanRescueRequest, user_id: s
         return proposal_data
 
 
+def _apply_event_parameter_updates(
+    cursor: Any,
+    event_id: str,
+    user_id: str,
+    event_dict: dict[str, Any],
+    updates: dict[str, Any],
+    applied_actions: list[str],
+) -> None:
+    """Applies event-level adjustments (budget, guest count, date) within the transaction."""
+    new_budget = updates.get("budget")
+    new_guests = updates.get("guest_count")
+    new_date = updates.get("date")
+
+    update_clauses = []
+    update_params = []
+
+    if new_budget is not None:
+        val = float(new_budget)
+        if val <= 0:
+            raise ValueError(f"Invalid proposed budget: {val}. Budget must be greater than zero.")
+        update_clauses.append("budget = ?")
+        update_params.append(val)
+        applied_actions.append(f"Updated event budget to {event_dict['currency']} {val:,.2f}")
+
+    if new_guests is not None:
+        g_val = int(new_guests)
+        if g_val <= 0 or g_val > 100000:
+            raise ValueError(f"Invalid proposed guest count: {g_val}.")
+        update_clauses.append("guest_count = ?")
+        update_params.append(g_val)
+        applied_actions.append(f"Updated guest count to {g_val}")
+
+    if new_date and len(str(new_date).strip()) >= 10:
+        d_str = str(new_date).strip()[:10]
+        try:
+            datetime.strptime(d_str, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f"Invalid proposed event date format: {d_str}. Expected YYYY-MM-DD.")
+        update_clauses.append("date = ?")
+        update_params.append(d_str)
+        applied_actions.append(f"Updated event date to {d_str}")
+
+    if update_clauses:
+        update_clauses.append("updated_at = CURRENT_TIMESTAMP")
+        update_params.extend([event_id, user_id])
+        query = f"UPDATE events SET {', '.join(update_clauses)} WHERE id = ? AND user_id = ?"
+        cursor.execute(query, update_params)
+
+
+def _apply_budget_adjustments(
+    cursor: Any,
+    event_id: str,
+    adjustments: list[dict[str, Any]],
+    applied_actions: list[str],
+) -> None:
+    """Applies line-item budget adjustments or inserts new items if absent."""
+    for b_adj in adjustments:
+        cat = b_adj.get("category", "General")
+        item_name = b_adj.get("item_name", "Adjusted Item")
+        proposed_est = max(0.0, float(b_adj.get("proposed_estimate", 0.0)))
+        reason = b_adj.get("adjustment_reason", "")
+
+        cursor.execute(
+            "SELECT id FROM budget_items WHERE event_id = ? AND (LOWER(item_name) = LOWER(?) OR LOWER(category) = LOWER(?)) LIMIT 1",
+            (event_id, item_name, cat),
+        )
+        existing = cursor.fetchone()
+
+        if existing:
+            cursor.execute(
+                """
+                UPDATE budget_items
+                SET estimated_amount = ?, notes = coalesce(notes || ' | ', '') || ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND event_id = ?
+                """,
+                (proposed_est, f"Plan Rescue: {reason}", existing["id"], event_id),
+            )
+            applied_actions.append(f"Adjusted budget for '{item_name}' to {proposed_est:,.2f}")
+        else:
+            new_item_id = f"bgt_{uuid.uuid4().hex[:8]}"
+            cursor.execute(
+                """
+                INSERT INTO budget_items (id, event_id, category, item_name, estimated_amount, status, notes)
+                VALUES (?, ?, ?, ?, ?, 'planned', ?)
+                """,
+                (new_item_id, event_id, cat, item_name, proposed_est, f"Added by Plan Rescue: {reason}"),
+            )
+            applied_actions.append(f"Added new budget item '{item_name}' ({proposed_est:,.2f})")
+
+
+def _apply_task_actions(
+    cursor: Any,
+    event_id: str,
+    actions: list[dict[str, Any]],
+    applied_actions: list[str],
+) -> None:
+    """Creates emergency tasks or elevates priorities for existing tasks."""
+    for t_act in actions:
+        action = (t_act.get("action") or "add").lower()
+        title = t_act.get("title")
+        cat = t_act.get("category", "General")
+        priority = t_act.get("priority", "high")
+        notes = t_act.get("notes") or "Created by Plan Rescue"
+
+        if action == "add":
+            task_id = f"task_{uuid.uuid4().hex[:8]}"
+            cursor.execute(
+                """
+                INSERT INTO tasks (id, event_id, title, category, priority, status, notes)
+                VALUES (?, ?, ?, ?, ?, 'todo', ?)
+                """,
+                (task_id, event_id, title, cat, priority, notes),
+            )
+            applied_actions.append(f"Created emergency task '{title}'")
+        elif action == "modify":
+            cursor.execute(
+                """
+                UPDATE tasks
+                SET priority = ?, notes = coalesce(notes || ' | ', '') || ?, updated_at = CURRENT_TIMESTAMP
+                WHERE event_id = ? AND LOWER(title) LIKE LOWER(?)
+                """,
+                (priority, notes, event_id, f"%{title}%"),
+            )
+            if cursor.rowcount > 0:
+                applied_actions.append(f"Updated priority for task '{title}' to {priority}")
+            else:
+                fallback_id = f"task_{uuid.uuid4().hex[:8]}"
+                cursor.execute(
+                    """
+                    INSERT INTO tasks (id, event_id, title, category, priority, status, notes)
+                    VALUES (?, ?, ?, ?, ?, 'todo', ?)
+                    """,
+                    (fallback_id, event_id, title, cat, priority, f"{notes} (created by Plan Rescue)"),
+                )
+                applied_actions.append(f"Created emergency task '{title}' with priority {priority}")
+
+
 def apply_rescue_proposal(event_id: str, request: PlanRescueApplyRequest, user_id: str) -> dict[str, Any]:
     """
     Applies the approved Plan Rescue adjustments to persistent database records.
@@ -122,138 +259,29 @@ def apply_rescue_proposal(event_id: str, request: PlanRescueApplyRequest, user_i
             raise ValueError("This rescue proposal has already been applied")
 
         proposal_data = json.loads(rescue_log["full_proposal_json"])
-        applied_actions = []
+        applied_actions: list[str] = []
 
-        # 1. Apply Event Parameter Updates (budget, guest count, date)
+        # 1. Apply Event Parameter Updates
         if request.apply_event_updates and proposal_data.get("proposed_event_updates"):
-            updates = proposal_data["proposed_event_updates"]
-            new_budget = updates.get("budget")
-            new_guests = updates.get("guest_count")
-            new_date = updates.get("date")
-
-            update_clauses = []
-            update_params = []
-
-            if new_budget is not None:
-                val = float(new_budget)
-                if val <= 0:
-                    raise ValueError(f"Invalid proposed budget: {val}. Budget must be greater than zero.")
-                update_clauses.append("budget = ?")
-                update_params.append(val)
-                applied_actions.append(f"Updated event budget to {event_dict['currency']} {val:,.2f}")
-
-            if new_guests is not None:
-                g_val = int(new_guests)
-                if g_val <= 0 or g_val > 100000:
-                    raise ValueError(f"Invalid proposed guest count: {g_val}.")
-                update_clauses.append("guest_count = ?")
-                update_params.append(g_val)
-                applied_actions.append(f"Updated guest count to {g_val}")
-
-            if new_date and len(str(new_date).strip()) >= 10:
-                d_str = str(new_date).strip()[:10]
-                try:
-                    datetime.strptime(d_str, "%Y-%m-%d")
-                except ValueError:
-                    raise ValueError(f"Invalid proposed event date format: {d_str}. Expected YYYY-MM-DD.")
-                update_clauses.append("date = ?")
-                update_params.append(d_str)
-                applied_actions.append(f"Updated event date to {d_str}")
-
-            if update_clauses:
-                update_clauses.append("updated_at = CURRENT_TIMESTAMP")
-                update_params.extend([event_id, user_id])
-                query = f"UPDATE events SET {', '.join(update_clauses)} WHERE id = ? AND user_id = ?"
-                cursor.execute(query, update_params)
+            _apply_event_parameter_updates(
+                cursor, event_id, user_id, event_dict, proposal_data["proposed_event_updates"], applied_actions
+            )
 
         # 2. Apply Budget Adjustments
         if request.apply_budget_adjustments and proposal_data.get("proposed_budget_adjustments"):
-            for b_adj in proposal_data["proposed_budget_adjustments"]:
-                cat = b_adj.get("category", "General")
-                item_name = b_adj.get("item_name", "Adjusted Item")
-                proposed_est = float(b_adj.get("proposed_estimate", 0.0))
-                if proposed_est < 0:
-                    proposed_est = 0.0
-                reason = b_adj.get("adjustment_reason", "")
-
-                # Check if matching item exists in budget
-                cursor.execute(
-                    "SELECT id FROM budget_items WHERE event_id = ? AND (LOWER(item_name) = LOWER(?) OR LOWER(category) = LOWER(?)) LIMIT 1",
-                    (event_id, item_name, cat),
-                )
-                existing = cursor.fetchone()
-
-                if existing:
-                    cursor.execute(
-                        """
-                    UPDATE budget_items
-                    SET estimated_amount = ?, notes = coalesce(notes || ' | ', '') || ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ? AND event_id = ?
-                    """,
-                        (proposed_est, f"Plan Rescue: {reason}", existing["id"], event_id),
-                    )
-                    applied_actions.append(f"Adjusted budget for '{item_name}' to {proposed_est:,.2f}")
-                else:
-                    new_item_id = f"bgt_{uuid.uuid4().hex[:8]}"
-                    cursor.execute(
-                        """
-                    INSERT INTO budget_items (id, event_id, category, item_name, estimated_amount, status, notes)
-                    VALUES (?, ?, ?, ?, ?, 'planned', ?)
-                    """,
-                        (new_item_id, event_id, cat, item_name, proposed_est, f"Added by Plan Rescue: {reason}"),
-                    )
-                    applied_actions.append(f"Added new budget item '{item_name}' ({proposed_est:,.2f})")
+            _apply_budget_adjustments(cursor, event_id, proposal_data["proposed_budget_adjustments"], applied_actions)
 
         # 3. Apply Task Actions
         if request.apply_task_actions and proposal_data.get("proposed_task_actions"):
-            for t_act in proposal_data["proposed_task_actions"]:
-                action = (t_act.get("action") or "add").lower()
-                title = t_act.get("title")
-                cat = t_act.get("category", "General")
-                priority = t_act.get("priority", "high")
-                notes = t_act.get("notes") or "Created by Plan Rescue"
-
-                if action == "add":
-                    task_id = f"task_{uuid.uuid4().hex[:8]}"
-                    cursor.execute(
-                        """
-                    INSERT INTO tasks (id, event_id, title, category, priority, status, notes)
-                    VALUES (?, ?, ?, ?, ?, 'todo', ?)
-                    """,
-                        (task_id, event_id, title, cat, priority, notes),
-                    )
-                    applied_actions.append(f"Created emergency task '{title}'")
-                elif action == "modify":
-                    cursor.execute(
-                        """
-                    UPDATE tasks
-                    SET priority = ?, notes = coalesce(notes || ' | ', '') || ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE event_id = ? AND LOWER(title) LIKE LOWER(?)
-                    """,
-                        (priority, notes, event_id, f"%{title}%"),
-                    )
-                    # Enforce row count verification
-                    if cursor.rowcount > 0:
-                        applied_actions.append(f"Updated priority for task '{title}' to {priority}")
-                    else:
-                        # Row count was 0; do not falsely claim modification, create the emergency task instead
-                        fallback_id = f"task_{uuid.uuid4().hex[:8]}"
-                        cursor.execute(
-                            """
-                        INSERT INTO tasks (id, event_id, title, category, priority, status, notes)
-                        VALUES (?, ?, ?, ?, ?, 'todo', ?)
-                        """,
-                            (fallback_id, event_id, title, cat, priority, f"{notes} (created by Plan Rescue)"),
-                        )
-                        applied_actions.append(f"Created emergency task '{title}' with priority {priority}")
+            _apply_task_actions(cursor, event_id, proposal_data["proposed_task_actions"], applied_actions)
 
         # 4. Mark rescue proposal as applied
         cursor.execute(
             """
-        UPDATE plan_rescue_logs
-        SET applied = 1, applied_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND event_id = ?
-        """,
+            UPDATE plan_rescue_logs
+            SET applied = 1, applied_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND event_id = ?
+            """,
             (request.rescue_id, event_id),
         )
 

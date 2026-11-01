@@ -670,7 +670,11 @@ async function loadDemoShowcaseEvent() {
 async function enterApp() {
   showScreen('app-screen');
   updateUserChip();
-  checkAiHealth();
+  try {
+    await checkAiHealth();
+  } catch (err) {
+    // Graceful degradation when network/offline
+  }
   await loadEvents();
 }
 
@@ -1808,10 +1812,6 @@ async function main() {
   document.getElementById('btn-topbar-home')?.addEventListener('click', showHomeScreen);
   document.getElementById('btn-sidebar-home')?.addEventListener('click', showHomeScreen);
   document.getElementById('btn-topbar-logout')?.addEventListener('click', logoutUser);
-  document.getElementById('btn-sidebar-demo')?.addEventListener('click', loadDemoShowcaseEvent);
-  document.getElementById('btn-demo-event-center')?.addEventListener('click', loadDemoShowcaseEvent);
-  document.getElementById('btn-home-demo')?.addEventListener('click', loadDemoShowcaseEvent);
-  document.getElementById('btn-login-demo-submit')?.addEventListener('click', loadDemoShowcaseEvent);
 
   initTabs();
 }

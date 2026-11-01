@@ -17,9 +17,9 @@
   --border-active: hsla(260, 80%, 70%, 0.5);
 
   /* Brand */
-  --primary:       hsl(258, 90%, 66%);
-  --primary-dark:  hsl(258, 80%, 54%);
-  --primary-glow:  hsla(258, 90%, 66%, 0.25);
+  --primary:       hsl(258, 90%, 70%);
+  --primary-dark:  hsl(258, 80%, 58%);
+  --primary-glow:  hsla(258, 90%, 70%, 0.25);
   --accent:        hsl(195, 90%, 55%);
   --accent-warm:   hsl(35, 95%, 60%);
   --rescue-color:  hsl(5, 90%, 60%);
@@ -30,7 +30,7 @@
   /* Text */
   --text-primary:  hsl(220, 20%, 94%);
   --text-secondary:hsl(220, 15%, 65%);
-  --text-muted:    hsl(220, 10%, 45%);
+  --text-muted:    hsl(220, 12%, 55%);
 
   /* Spacing */
   --radius-sm:  6px;

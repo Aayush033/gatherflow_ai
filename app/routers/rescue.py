@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +9,8 @@ from app.database import get_db
 from app.schemas import PlanRescueApplyRequest, PlanRescueProposal, PlanRescueRequest
 from app.services.ai_service import AIServiceError
 from app.services.rescue_service import apply_rescue_proposal, create_rescue_proposal
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/events/{event_id}/rescue", tags=["Plan Rescue AI (Signature Differentiator)"])
 
@@ -54,6 +57,7 @@ def apply_rescue_plan(
 
 @router.get("/history")
 def get_rescue_history(event_id: str, current_user: dict = Depends(get_current_user_dep)) -> list[dict[str, Any]]:
+    """Retrieves full audit log of all generated Plan Rescue proposals for this event."""
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM events WHERE id = ? AND user_id = ?", (event_id, current_user["id"]))
@@ -75,7 +79,8 @@ def get_rescue_history(event_id: str, current_user: dict = Depends(get_current_u
             d = dict(row)
             try:
                 d["proposal_data"] = json.loads(d["full_proposal_json"])
-            except Exception:
+            except Exception as exc:
+                logger.warning("Could not decode proposal JSON in history: %s", exc)
                 d["proposal_data"] = {}
             del d["full_proposal_json"]
             logs.append(d)

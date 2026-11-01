@@ -13,27 +13,40 @@ class Settings:
     VERSION: str = "1.0.0"
     DESCRIPTION: str = "GenAI-powered planning studio for weddings, birthdays, and community events"
 
-    # Database
-    DATABASE_PATH: Path = BASE_DIR / "gatherflow.db"
-    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{DATABASE_PATH}")
-    CHROMA_PERSIST_PATH: Path = BASE_DIR / "chroma_db"
+    def __init__(self) -> None:
+        self.BASE_DIR: Path = BASE_DIR
+        self.DATABASE_PATH: Path = BASE_DIR / "gatherflow.db"
+        self._database_url: str | None = os.getenv("DATABASE_URL")
+        self.CHROMA_PERSIST_PATH: Path = BASE_DIR / "chroma_db"
 
-    # AI Configuration (Gemini)
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    # Default model as specified by the master challenge: gemini-3.8-flash
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+        # AI Configuration (Gemini)
+        self.GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+        # Default model as specified by the master challenge: gemini-3.8-flash
+        self.GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
-    # Environment
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
-    ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "")
+        # Environment
+        self.ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+        self.LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+        self.ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "")
 
-    # Security & Evaluator Session
-    SESSION_COOKIE_NAME: str = "gatherflow_session"
-    SESSION_SECRET_KEY: str = os.getenv("SESSION_SECRET_KEY", "gatherflow-default-session-secret-change-in-prod")
-    EVALUATOR_PASSCODE: str = os.getenv("EVALUATOR_PASSCODE", "gatherflow-evaluator")
-    DEFAULT_EVALUATOR_EMAIL: str = "evaluator@gatherflow.local"
-    DEFAULT_EVALUATOR_NAME: str = "Auditor & Evaluator"
+        # Security & Evaluator Session
+        self.SESSION_COOKIE_NAME: str = "gatherflow_session"
+        self.SESSION_SECRET_KEY: str = os.getenv(
+            "SESSION_SECRET_KEY", "gatherflow-default-session-secret-change-in-prod"
+        )
+        self.EVALUATOR_PASSCODE: str = os.getenv("EVALUATOR_PASSCODE", "gatherflow-evaluator")
+        self.DEFAULT_EVALUATOR_EMAIL: str = "evaluator@gatherflow.local"
+        self.DEFAULT_EVALUATOR_NAME: str = "Auditor & Evaluator"
+
+    @property
+    def DATABASE_URL(self) -> str:
+        if self._database_url:
+            return self._database_url
+        return f"sqlite:///{self.DATABASE_PATH}"
+
+    @DATABASE_URL.setter
+    def DATABASE_URL(self, value: str | None) -> None:
+        self._database_url = value
 
 
 settings = Settings()
