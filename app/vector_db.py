@@ -19,12 +19,14 @@ from typing import Any
 
 import chromadb
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
+from chromadb.utils.embedding_functions import register_embedding_function
 
 from app.config import settings
 
 logger = logging.getLogger("gatherflow.vector_db")
 
 
+@register_embedding_function
 class GatherFlowEmbeddingFunction(EmbeddingFunction):
     """
     Deterministic, offline vector embedding function.
@@ -179,8 +181,8 @@ def init_vector_db() -> None:
             embedding_function=_embedding_fn,
             metadata={"description": "Event planning heuristics and general suggestions"},
         )
-        if know_col.count() == 0:
-            know_col.add(
+        if know_col.count() < len(GENERAL_KNOWLEDGE_SUGGESTIONS):
+            know_col.upsert(
                 ids=[k["id"] for k in GENERAL_KNOWLEDGE_SUGGESTIONS],
                 documents=[f"{k['title']}: {k['doc']}" for k in GENERAL_KNOWLEDGE_SUGGESTIONS],
                 metadatas=[{"title": k["title"], "category": k["category"]} for k in GENERAL_KNOWLEDGE_SUGGESTIONS],
@@ -193,8 +195,8 @@ def init_vector_db() -> None:
             embedding_function=_embedding_fn,
             metadata={"description": "General crisis recovery suggestions and contingency playbooks"},
         )
-        if rescue_col.count() == 0:
-            rescue_col.add(
+        if rescue_col.count() < len(GENERAL_RESCUE_PLAYBOOKS):
+            rescue_col.upsert(
                 ids=[r["id"] for r in GENERAL_RESCUE_PLAYBOOKS],
                 documents=[f"Scenario: {r['scenario']}. Strategy: {r['doc']}" for r in GENERAL_RESCUE_PLAYBOOKS],
                 metadatas=[
@@ -335,16 +337,18 @@ def search_rescue_playbooks(scenario_text: str, n_results: int = 2) -> list[dict
     client = get_chroma_client()
     rescue_col = client.get_or_create_collection(name="rescue_playbooks", embedding_function=_embedding_fn)
     if rescue_col.count() == 0:
+        logger.info("rescue_playbooks collection empty, triggering initialization")
         init_vector_db()
         rescue_col = client.get_or_create_collection(name="rescue_playbooks", embedding_function=_embedding_fn)
 
     if rescue_col.count() == 0:
+        logger.warning("rescue_playbooks collection remains empty after initialization")
         return []
 
     try:
         results = rescue_col.query(query_texts=[scenario_text], n_results=min(n_results, max(1, rescue_col.count())))
     except Exception as e:
-        logger.warning("Retrieval error in rescue_playbooks: %s", e)
+        logger.error("Retrieval error in rescue_playbooks query: %s", e)
         return []
 
     items = []

@@ -32,12 +32,13 @@ def setup_test_environment():
     settings.DATABASE_URL = f"sqlite:///{test_db_path}"
     settings.CHROMA_PERSIST_PATH = test_chroma_path
 
-    init_db(test_db_path)
-
-    # Use 100% in-memory ephemeral ChromaDB for tests
+    # Inject ephemeral ChromaDB BEFORE init_db(), ensuring init_db()'s internal
+    # init_vector_db() uses this isolated in-memory client.
     ephemeral_client = chromadb.EphemeralClient()
     set_chroma_client(ephemeral_client)
     init_vector_db()
+
+    init_db(test_db_path)
 
     yield test_db_path
 

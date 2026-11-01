@@ -24,16 +24,50 @@ def test_chromadb_knowledge_rag_retrieval():
 
 
 def test_chromadb_rescue_playbook_retrieval():
-    """Verifies retrieval of crisis contingency suggestions."""
+    """
+    Verifies crisis contingency playbook initialization and retrieval:
+    1. All expected rescue records are initialized.
+    2. A weather-contingency query returns actual stored playbook content.
+    3. Returned guidance contains relevant stored information.
+    4. Repeated initialization does not duplicate records.
+    5. Other application collections remain unaffected.
+    """
+    from app.vector_db import GENERAL_RESCUE_PLAYBOOKS, get_chroma_client
+
     init_vector_db()
+    client = get_chroma_client()
+    rescue_col = client.get_collection("rescue_playbooks")
+    initial_count = rescue_col.count()
+
+    # 1. All expected rescue records are initialized
+    assert initial_count == len(GENERAL_RESCUE_PLAYBOOKS)
+    assert initial_count > 0
+
+    # 2. A weather-contingency query returns actual stored playbook content
     playbooks = search_rescue_playbooks("rain forecast outdoor weather contingency", n_results=2)
     assert len(playbooks) > 0
+
+    # 3. Returned guidance contains relevant stored information
     assert any(
         "weather" in p["guidance"].lower()
         or "indoor" in p["guidance"].lower()
         or "contingency" in p["guidance"].lower()
         for p in playbooks
     )
+    first_match = playbooks[0]
+    assert first_match["id"]
+    assert first_match["scenario"]
+    assert len(first_match["guidance"]) > 20
+
+    # 4. Repeated initialization does not duplicate records
+    init_vector_db()
+    assert rescue_col.count() == initial_count
+
+    # 5. Other application collections remain unaffected
+    vendor_col = client.get_collection("vendor_catalog")
+    initial_vendor_count = vendor_col.count()
+    init_vector_db()
+    assert vendor_col.count() == initial_vendor_count
 
 
 def test_chromadb_user_vendor_indexing_and_event_isolation():
