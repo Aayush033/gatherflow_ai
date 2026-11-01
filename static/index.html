@@ -12,10 +12,12 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/main.css?v=20261031_2330" />
+  <link rel="stylesheet" href="/static/css/main.css?v=20261101_1030" />
 </head>
 
 <body>
+  <!-- ACCESSIBILITY: SKIP LINK (WCAG 2.4.1 Bypass Blocks) -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- LOADING SCREEN -->
   <div id="loading-screen" class="loading-screen">
@@ -227,7 +229,7 @@
       </div>
       <nav class="sidebar-nav" aria-label="Event tabs">
         <ul class="nav-tabs" role="tablist">
-          <li><button class="nav-tab" id="btn-sidebar-home" type="button" aria-selected="false"><span
+          <li><button class="nav-tab" id="btn-sidebar-home" type="button" role="tab" aria-selected="false" aria-label="Home and Guide"><span
                 class="tab-icon">&#127968;</span><span class="tab-label" data-i18n="tab_home">Home &amp; Guide</span></button></li>
           <li><button class="nav-tab active" data-tab="blueprint" role="tab" aria-selected="true"
               aria-controls="tab-blueprint" id="nav-blueprint"><span class="tab-icon">&#128506;</span><span
@@ -250,7 +252,7 @@
         <div class="ai-status-indicator" id="ai-status-indicator">
           <span class="status-dot" id="status-dot"></span><span id="ai-status-label">AI: Online</span>
         </div>
-        <button id="btn-open-settings" class="btn btn-ghost btn-sm" data-i18n="btn_settings">&#9881; Settings</button>
+        <button id="btn-open-settings" class="btn btn-ghost btn-sm" aria-haspopup="dialog" aria-label="Open Settings and AI Status" data-i18n="btn_settings">&#9881; Settings</button>
       </div>
     </aside>
 
@@ -272,7 +274,7 @@
           </select>
           <button id="btn-topbar-home" class="btn btn-ghost btn-sm" title="Go to Home &amp; Guide" data-i18n="nav_home">&#127968; Home &amp;
             Guide</button>
-          <button id="btn-open-copilot" class="btn btn-ghost btn-sm copilot-trigger">&#129302; Copilot<span
+          <button id="btn-open-copilot" class="btn btn-ghost btn-sm copilot-trigger" aria-haspopup="dialog" aria-expanded="false" aria-label="Open AI Planning Copilot">&#129302; Copilot<span
               class="copilot-badge" id="copilot-badge"></span></button>
           <div class="user-chip" id="user-chip"><span class="user-avatar">&#128100;</span><span
               id="user-name-display">Guest</span></div>
@@ -351,7 +353,7 @@
             <div class="card plan-concept-card">
               <div class="card-header">
                 <h3 class="card-title">AI Event Concept</h3><button id="btn-regenerate-plan"
-                  class="btn btn-ghost btn-sm">&#8635; Regenerate</button>
+                  class="btn btn-ghost btn-sm" aria-label="Regenerate AI Event Concept">&#8635; Regenerate</button>
               </div>
               <div id="plan-concept-content" class="plan-concept-content">
                 <p class="muted">No plan generated yet. Click Regenerate to ask Gemini for ideas.</p>
@@ -408,10 +410,10 @@
               <div class="card">
                 <div class="card-header">
                   <h3 class="card-title">Budget Line Items</h3><button id="btn-add-budget-item"
-                    class="btn btn-primary btn-sm">+ Add Item</button>
+                    class="btn btn-primary btn-sm" aria-haspopup="dialog" aria-label="Add budget item">+ Add Item</button>
                 </div>
                 <div class="table-wrapper">
-                  <table class="data-table" id="budget-table">
+                  <table class="data-table" id="budget-table" aria-label="Event Budget Line Items">
                     <thead>
                       <tr>
                         <th>Category</th>
@@ -442,20 +444,20 @@
             <div class="card-header">
               <h3 class="card-title">Task &amp; Checklist Timeline</h3>
               <div class="card-actions">
-                <select id="task-filter-status" class="form-input form-select form-select-sm">
+                <select id="task-filter-status" class="form-input form-select form-select-sm" aria-label="Filter tasks by status">
                   <option value="">All Statuses</option>
                   <option value="todo">To Do</option>
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
                 </select>
-                <select id="task-filter-priority" class="form-input form-select form-select-sm">
+                <select id="task-filter-priority" class="form-input form-select form-select-sm" aria-label="Filter tasks by priority">
                   <option value="">All Priorities</option>
                   <option value="critical">Critical</option>
                   <option value="high">High</option>
                   <option value="medium">Medium</option>
                   <option value="low">Low</option>
                 </select>
-                <button id="btn-add-task" class="btn btn-primary btn-sm">+ Add Task</button>
+                <button id="btn-add-task" class="btn btn-primary btn-sm" aria-haspopup="dialog" aria-label="Add new task">+ Add Task</button>
               </div>
             </div>
             <div class="progress-bar-wrapper">
@@ -484,9 +486,10 @@
             </div>
             <div style="display:flex;gap:0.75rem;padding:0.5rem 1.25rem 1.25rem;flex-wrap:wrap;">
               <input type="text" id="vendor-semantic-input" class="form-input"
+                aria-label="Search vendors semantically"
                 placeholder="e.g. candid drone photography, organic vegan dinner buffet..."
                 style="flex:1;min-width:240px;" />
-              <select id="vendor-semantic-category" class="form-input form-select" style="width:160px;">
+              <select id="vendor-semantic-category" class="form-input form-select" aria-label="Filter vendors by category" style="width:160px;">
                 <option value="">All Categories</option>
                 <option value="Venue">Venue</option>
                 <option value="Catering">Catering</option>
@@ -504,11 +507,11 @@
 
           <div class="card">
             <div class="card-header">
-              <h3 class="card-title">Event Vendor CRM</h3><button id="btn-add-vendor" class="btn btn-primary btn-sm">+
+              <h3 class="card-title">Event Vendor CRM</h3><button id="btn-add-vendor" class="btn btn-primary btn-sm" aria-haspopup="dialog" aria-label="Add new vendor">+
                 Add Vendor</button>
             </div>
             <div class="table-wrapper">
-              <table class="data-table" id="vendor-table">
+              <table class="data-table" id="vendor-table" aria-label="Event Vendors and Quotations">
                 <thead>
                   <tr>
                     <th>Vendor</th>
@@ -611,6 +614,7 @@
       </div>
       <form id="copilot-form" class="copilot-input-row">
         <input type="text" id="copilot-input" class="form-input copilot-input" placeholder="Ask Gemini anything..."
+          aria-label="Ask AI Copilot a question"
           autocomplete="off" />
         <button type="submit" id="btn-copilot-send" class="btn btn-primary">Send</button>
       </form>
@@ -624,7 +628,7 @@
     <div class="modal glass">
       <div class="modal-header">
         <h2 id="new-event-modal-title" class="modal-title">Create New Event</h2><button class="modal-close"
-          data-modal="modal-new-event">&#10005;</button>
+          data-modal="modal-new-event" aria-label="Close Create New Event modal">&#10005;</button>
       </div>
       <form id="new-event-form" class="modal-form">
         <div class="form-row">
@@ -654,7 +658,7 @@
               id="ne-guests" class="form-input" required min="1" max="100000" placeholder="150" /></div>
           <div class="form-group"><label class="form-label" for="ne-budget">Total Budget *</label>
             <div class="input-with-prefix">
-              <select id="ne-currency" class="form-input form-select form-select-currency">
+              <select id="ne-currency" class="form-input form-select form-select-currency" aria-label="Currency">
                 <option value="INR">&#8377; INR</option>
                 <option value="USD">$ USD</option>
                 <option value="EUR">&#8364; EUR</option>
@@ -688,7 +692,7 @@
     <div class="modal glass">
       <div class="modal-header">
         <h2 id="budget-item-modal-title" class="modal-title">Budget Item</h2><button class="modal-close"
-          data-modal="modal-budget-item">&#10005;</button>
+          data-modal="modal-budget-item" aria-label="Close Budget Item modal">&#10005;</button>
       </div>
       <form id="budget-item-form" class="modal-form">
         <input type="hidden" id="bi-id" />
@@ -734,7 +738,7 @@
     <div class="modal glass">
       <div class="modal-header">
         <h2 id="task-modal-title" class="modal-title">Task</h2><button class="modal-close"
-          data-modal="modal-task">&#10005;</button>
+          data-modal="modal-task" aria-label="Close Task modal">&#10005;</button>
       </div>
       <form id="task-form" class="modal-form">
         <input type="hidden" id="task-id" />
@@ -782,7 +786,7 @@
     <div class="modal glass">
       <div class="modal-header">
         <h2 id="vendor-modal-title" class="modal-title">Vendor</h2><button class="modal-close"
-          data-modal="modal-vendor">&#10005;</button>
+          data-modal="modal-vendor" aria-label="Close Vendor modal">&#10005;</button>
       </div>
       <form id="vendor-form" class="modal-form">
         <input type="hidden" id="vendor-id" />
@@ -834,7 +838,7 @@
     <div class="modal glass">
       <div class="modal-header">
         <h2 id="settings-modal-title" class="modal-title">&#9881; Settings &amp; AI Status</h2>
-        <button class="modal-close" data-modal="modal-settings">&#10005;</button>
+        <button class="modal-close" data-modal="modal-settings" aria-label="Close Settings modal">&#10005;</button>
       </div>
       <div class="modal-form">
         <div class="settings-current-info">
@@ -871,7 +875,7 @@
   </div>
 
   <div id="toast-container" class="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
-  <script src="/static/js/app.js?v=20261031_2330"></script>
+  <script src="/static/js/app.js?v=20261101_1030"></script>
 </body>
 
 </html>

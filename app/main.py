@@ -1,26 +1,26 @@
-import os
-from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.config import settings, BASE_DIR
+from app.config import BASE_DIR, settings
 from app.database import init_db
 from app.routers import (
     auth,
-    events,
     blueprint,
     budget,
+    copilot,
+    events,
+    health,
+    rescue,
     tasks,
     vendors,
-    rescue,
-    copilot,
-    health
 )
 from app.services.ai_service import check_model_health
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,11 +28,9 @@ async def lifespan(app: FastAPI):
     init_db()
     yield
 
+
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.VERSION,
-    description=settings.DESCRIPTION,
-    lifespan=lifespan
+    title=settings.PROJECT_NAME, version=settings.VERSION, description=settings.DESCRIPTION, lifespan=lifespan
 )
 
 # CORS configuration — restricted to trusted origins (same-origin app + dev origins)
@@ -42,7 +40,7 @@ allowed_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
-    "http://127.0.0.1:5173"
+    "http://127.0.0.1:5173",
 ]
 if settings.ALLOWED_ORIGINS:
     for orig in settings.ALLOWED_ORIGINS.split(","):
@@ -68,9 +66,11 @@ app.include_router(rescue.router)
 app.include_router(copilot.router)
 app.include_router(health.router)
 
+
 class SetApiKeyRequest(BaseModel):
     api_key: str
     model: str | None = None
+
 
 @app.post("/api/config/gemini-key", tags=["Configuration"])
 def configure_gemini_key(req: SetApiKeyRequest):
@@ -81,7 +81,7 @@ def configure_gemini_key(req: SetApiKeyRequest):
     if settings.ENVIRONMENT == "production":
         raise HTTPException(
             status_code=403,
-            detail="Runtime API key configuration is disabled in production. Configure GEMINI_API_KEY via server environment variables."
+            detail="Runtime API key configuration is disabled in production. Configure GEMINI_API_KEY via server environment variables.",
         )
 
     if not req.api_key or not req.api_key.strip():
@@ -90,25 +90,26 @@ def configure_gemini_key(req: SetApiKeyRequest):
     settings.GEMINI_API_KEY = req.api_key.strip()
     if req.model and req.model.strip():
         settings.GEMINI_MODEL = req.model.strip()
-        
+
     health_result = check_model_health(api_key_override=settings.GEMINI_API_KEY)
-    return {
-        "success": health_result.get("connected", False),
-        "health": health_result
-    }
+    return {"success": health_result.get("connected", False), "health": health_result}
+
 
 # Mount static directory for the frontend
 static_dir = BASE_DIR / "static"
 static_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
+
 @app.get("/", include_in_schema=False)
 async def serve_index():
     index_file = static_dir / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
-    return JSONResponse({
-        "message": f"Welcome to {settings.PROJECT_NAME} API v{settings.VERSION}. Frontend static files are initializing.",
-        "api_docs": "/docs",
-        "health": "/api/health"
-    })
+    return JSONResponse(
+        {
+            "message": f"Welcome to {settings.PROJECT_NAME} API v{settings.VERSION}. Frontend static files are initializing.",
+            "api_docs": "/docs",
+            "health": "/api/health",
+        }
+    )

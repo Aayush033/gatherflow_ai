@@ -1,0 +1,35 @@
+[project]
+name = "gatherflow-ai"
+version = "1.0.0"
+description = "GatherFlow AI — GenAI Event Planning Studio powered by Google Gemini 3.8-Flash, ChromaDB vector search, and 100% deterministic financial logic."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Aayush Bansal" }
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort import sorting
+    "UP",  # pyupgrade (modern typing)
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+]
+ignore = [
+    "B008", # Do not perform function call `Depends` in argument defaults (standard FastAPI pattern)
+    "B904", # Allow raising clean HTTPExceptions without leaking internal tracebacks
+    "E501", # Line too long (handled by formatter)
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"

@@ -1,23 +1,24 @@
 import time
-from typing import Optional
-from pydantic import BaseModel
+from typing import Any
+
 from fastapi import APIRouter
+from pydantic import BaseModel
+
 from app.config import settings
 from app.database import get_db
 from app.services.ai_service import check_model_health
 
 router = APIRouter(prefix="/api/health", tags=["System Health & Diagnostics"])
 
-_last_verified_cache = {
-    "timestamp": 0.0,
-    "result": None
-}
+_last_verified_cache: dict[str, Any] = {"timestamp": 0.0, "result": None}
+
 
 class VerifyAiRequest(BaseModel):
-    api_key: Optional[str] = None
+    api_key: str | None = None
+
 
 @router.get("")
-def get_system_health():
+def get_system_health() -> dict[str, Any]:
     """
     Returns system status including database integrity and AI configuration.
     Fast and non-blocking: does not trigger an expensive live external API call
@@ -33,11 +34,11 @@ def get_system_health():
             db_tables = [r[0] for r in cursor.fetchall()]
             db_status = "healthy" if len(db_tables) >= 6 else "incomplete"
     except Exception as e:
-        db_status = f"error: {str(e)}"
-        
+        db_status = f"error: {e!s}"
+
     # 2. AI configuration check (offline, instant)
     key_configured = bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip())
-    
+
     # If we have a recent verified result within 60s, use it; otherwise report configuration state
     cached = _last_verified_cache["result"]
     now = time.time()
@@ -50,28 +51,27 @@ def get_system_health():
             "connected": False,
             "key_configured": key_configured,
             "verified": False,
-            "message": f"Gemini API key is configured for model {settings.GEMINI_MODEL}. Run /api/health/verify-ai to verify live connectivity." if key_configured else "GEMINI_API_KEY is not configured.",
-            "verification_endpoint": "/api/health/verify-ai"
+            "message": f"Gemini API key is configured for model {settings.GEMINI_MODEL}. Run /api/health/verify-ai to verify live connectivity."
+            if key_configured
+            else "GEMINI_API_KEY is not configured.",
+            "verification_endpoint": "/api/health/verify-ai",
         }
-    
+
     overall_status = "healthy" if db_status == "healthy" else "degraded"
-    
+
     return {
         "status": overall_status,
         "app_name": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
-        "database": {
-            "status": db_status,
-            "engine": "sqlite",
-            "tables": db_tables
-        },
+        "database": {"status": db_status, "engine": "sqlite", "tables": db_tables},
         "ai": ai_info,
-        "generative_ai": ai_info
+        "generative_ai": ai_info,
     }
 
+
 @router.post("/verify-ai")
-def verify_ai_connectivity(req: Optional[VerifyAiRequest] = None):
+def verify_ai_connectivity(req: VerifyAiRequest | None = None) -> dict[str, Any]:
     """
     Explicit, on-demand live connectivity check against the Gemini model.
     Sends a real smoke test request and caches the verified result.
@@ -82,9 +82,5 @@ def verify_ai_connectivity(req: Optional[VerifyAiRequest] = None):
     if not api_key_override:
         _last_verified_cache["timestamp"] = time.time()
         _last_verified_cache["result"] = result
-    
-    return {
-        "status": "healthy" if result.get("connected") else "degraded",
-        "ai": result,
-        "generative_ai": result
-    }
+
+    return {"status": "healthy" if result.get("connected") else "degraded", "ai": result, "generative_ai": result}

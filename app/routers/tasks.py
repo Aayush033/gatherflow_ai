@@ -1,101 +1,95 @@
 import uuid
-from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.auth_deps import get_current_user_dep, verify_event_ownership
 from app.database import get_db
-from app.auth_deps import get_current_user_dep
-from app.schemas import (
-    TaskCreate,
-    TaskUpdate,
-    TaskOut,
-    TaskSummaryOut
-)
+from app.schemas import TaskCreate, TaskOut, TaskSummaryOut, TaskUpdate
 from app.services.task_service import compute_task_summary, evaluate_task
 
 router = APIRouter(prefix="/api/events/{event_id}/tasks", tags=["Timeline & Task Management"])
 
-def verify_event_ownership(event_id: str, user_id: str):
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id FROM events WHERE id = ? AND user_id = ?", (event_id, user_id))
-        if not cursor.fetchone():
-            raise HTTPException(status_code=404, detail="Event not found")
 
-@router.get("", response_model=List[TaskOut])
+@router.get("", response_model=list[TaskOut])
 def list_tasks(
     event_id: str,
-    status_filter: Optional[str] = Query(None, alias="status"),
-    category_filter: Optional[str] = Query(None, alias="category"),
-    current_user: dict = Depends(get_current_user_dep)
+    status_filter: str | None = Query(None, alias="status"),
+    category_filter: str | None = Query(None, alias="category"),
+    current_user: dict = Depends(get_current_user_dep),
 ):
     verify_event_ownership(event_id, current_user["id"])
-    
+
     query = "SELECT * FROM tasks WHERE event_id = ?"
     params = [event_id]
-    
+
     if status_filter:
         query += " AND status = ?"
         params.append(status_filter.lower())
     if category_filter:
         query += " AND category = ?"
         params.append(category_filter)
-        
+
     query += " ORDER BY CASE WHEN status = 'completed' THEN 1 ELSE 0 END, due_date ASC NULLS LAST"
-    
+
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute(query, params)
         rows = [dict(r) for r in cursor.fetchall()]
-        
+
     results = []
     for r in rows:
         is_overdue, days_rem = evaluate_task(r)
         r["is_overdue"] = is_overdue
         r["days_remaining"] = days_rem
         results.append(TaskOut(**r))
-        
+
     return results
 
+
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
-def create_task(
-    event_id: str,
-    task_in: TaskCreate,
-    current_user: dict = Depends(get_current_user_dep)
-):
+def create_task(event_id: str, task_in: TaskCreate, current_user: dict = Depends(get_current_user_dep)):
     verify_event_ownership(event_id, current_user["id"])
     task_id = f"task_{uuid.uuid4().hex[:8]}"
-    
+
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
         INSERT INTO tasks (
             id, event_id, title, description, category, due_date,
             priority, status, assignee, dependency_task_id, notes
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            task_id, event_id, task_in.title, task_in.description,
-            task_in.category, task_in.due_date, task_in.priority,
-            task_in.status, task_in.assignee, task_in.dependency_task_id,
-            task_in.notes
-        ))
+        """,
+            (
+                task_id,
+                event_id,
+                task_in.title,
+                task_in.description,
+                task_in.category,
+                task_in.due_date,
+                task_in.priority,
+                task_in.status,
+                task_in.assignee,
+                task_in.dependency_task_id,
+                task_in.notes,
+            ),
+        )
         cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
         row = dict(cursor.fetchone())
-        
+
     is_overdue, days_rem = evaluate_task(row)
     row["is_overdue"] = is_overdue
     row["days_remaining"] = days_rem
     return TaskOut(**row)
 
+
 @router.patch("/{task_id}", response_model=TaskOut)
 def update_task(
-    event_id: str,
-    task_id: str,
-    task_update: TaskUpdate,
-    current_user: dict = Depends(get_current_user_dep)
+    event_id: str, task_id: str, task_update: TaskUpdate, current_user: dict = Depends(get_current_user_dep)
 ):
     verify_event_ownership(event_id, current_user["id"])
     update_data = task_update.model_dump(exclude_unset=True)
-    
+
     with get_db() as conn:
         cursor = conn.cursor()
         if update_data:
@@ -106,37 +100,31 @@ def update_task(
             cursor.execute(f"UPDATE tasks SET {', '.join(clauses)} WHERE id = ? AND event_id = ?", values)
             if cursor.rowcount == 0:
                 raise HTTPException(status_code=404, detail="Task not found")
-                
+
         cursor.execute("SELECT * FROM tasks WHERE id = ? AND event_id = ?", (task_id, event_id))
         row = cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Task not found")
         task_dict = dict(row)
-        
+
     is_overdue, days_rem = evaluate_task(task_dict)
     task_dict["is_overdue"] = is_overdue
     task_dict["days_remaining"] = days_rem
     return TaskOut(**task_dict)
 
+
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_task(
-    event_id: str,
-    task_id: str,
-    current_user: dict = Depends(get_current_user_dep)
-):
+def delete_task(event_id: str, task_id: str, current_user: dict = Depends(get_current_user_dep)):
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM tasks WHERE id = ? AND event_id = ?", (task_id, event_id))
         if cursor.rowcount == 0:
             raise HTTPException(status_code=404, detail="Task not found")
-    return None
+
 
 @router.get("/summary", response_model=TaskSummaryOut)
-def get_task_summary(
-    event_id: str,
-    current_user: dict = Depends(get_current_user_dep)
-):
+def get_task_summary(event_id: str, current_user: dict = Depends(get_current_user_dep)):
     verify_event_ownership(event_id, current_user["id"])
     with get_db() as conn:
         cursor = conn.cursor()
